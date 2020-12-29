@@ -1,0 +1,9 @@
+# Gradle
+.gradle
+build
+
+# Eclipse / Buildship
+.settings
+.classpath
+.project
+bin

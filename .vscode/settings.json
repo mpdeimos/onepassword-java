@@ -1,0 +1,19 @@
+{
+	"editor.formatOnPaste": true,
+	"editor.formatOnType": true,
+	"editor.formatOnSave": true,
+	"files.exclude": {
+		"**/.gradle": true,
+		"**/.classpath": true,
+		"**/.project": true,
+		"**/.settings": true,
+		"**/.factorypath": true
+	},
+	"java.saveActions.organizeImports": true,
+	"java.format.settings.profile": "GoogleStyle",
+	"java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
+	"java.implementationsCodeLens.enabled": true,
+	"java.semanticHighlighting.enabled": true,
+	"java.signatureHelp.enabled": true,
+	"java.configuration.updateBuildConfiguration": "automatic"
+}
