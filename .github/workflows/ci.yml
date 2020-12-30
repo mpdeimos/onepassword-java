@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [ main ]
 
-jobs:
-  build:
+env:
+  ONE_PASSWORD_VERSION: 1.8.0
 
+jobs:
+  linux:
+    name: Linux Build
     runs-on: ubuntu-latest
 
     steps:
@@ -23,10 +26,38 @@ jobs:
       run: |
         mkdir -p .bin
         echo `realpath .bin` >> $GITHUB_PATH
-        (cd .bin && (wget -qO- https://cache.agilebits.com/dist/1P/op/pkg/v1.8.0/op_linux_amd64_v1.8.0.zip | jar xv) && chmod +x op)
+        (cd .bin && (curl --silent --show-error --fail https://cache.agilebits.com/dist/1P/op/pkg/v${ONE_PASSWORD_VERSION}/op_linux_amd64_v${ONE_PASSWORD_VERSION}.zip | jar xv) && chmod +x op)
 
     - name: Verify 1password is executable
       run: op -v
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+  windows:
+    name: Windows Build
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up JDK
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.8
+
+    - name: Download 1password
+      shell: bash
+      run: |
+        mkdir -p .bin
+        echo `realpath .bin` >> $GITHUB_PATH
+        (cd .bin && (curl curl --silent --show-error --fail https://cache.agilebits.com/dist/1P/op/pkg/v${ONE_PASSWORD_VERSION}/op_windows_amd64_v${ONE_PASSWORD_VERSION}.zip | jar xv))
+
+    - name: Verify 1password is executable
+      shell: cmd
+      run: |
+        set
+        op.exe -v
 
     - name: Build with Gradle
       run: ./gradlew build
