@@ -5,10 +5,11 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 import com.ongres.process.FluentProcess;
+import com.ongres.process.FluentProcessBuilder;
+
+import one.password.Utils;
 
 public class Op {
-	private static final boolean WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
-
 	private final Config config;
 
 	public Op() {
@@ -25,22 +26,27 @@ public class Op {
 
 	private String execute(String... arguments) throws IOException {
 		String executable = "op";
-		if (WINDOWS) {
+		if (Utils.IS_WINDOWS) {
 			executable += ".exe";
 		}
 
-		return FluentProcess.start(executable, arguments).get();
+		if (config.getExecutable().isPresent()) {
+			executable = config.getExecutable().get().toAbsolutePath().toString();
+		}
+
+		FluentProcessBuilder builder = FluentProcess.builder(executable, arguments);
+		return builder.start().get();
 	}
 
 	public static class Config {
-		private Path binary;
+		private Path executable;
 
-		public Optional<Path> getBinary() {
-			return Optional.of(binary);
+		public Optional<Path> getExecutable() {
+			return Optional.ofNullable(executable);
 		}
 
-		public void setBinary(Path binary) {
-			this.binary = binary;
+		public void setExecutable(Path executable) {
+			this.executable = executable;
 		}
 	}
 }

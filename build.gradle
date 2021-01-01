@@ -1,5 +1,12 @@
 plugins {
 	id 'java-library'
+	id "de.undercouch.download" version "4.1.1"
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(8)
+	}
 }
 
 repositories {
@@ -16,3 +23,28 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+task downloadOnePassword {
+	doLast {
+		def onePasswordVersion = file("${sourceSets.test.resources.srcDirs.first()}/op.version").text
+		def buildBinDir = file("$buildDir/bin")
+		download {
+			src ([
+				"https://cache.agilebits.com/dist/1P/op/pkg/v${onePasswordVersion}/op_linux_amd64_v${onePasswordVersion}.zip",
+				"https://cache.agilebits.com/dist/1P/op/pkg/v${onePasswordVersion}/op_windows_amd64_v${onePasswordVersion}.zip"
+			])
+			dest buildBinDir
+			overwrite false
+		}
+
+		fileTree(dir: buildBinDir).include("op_*_v${onePasswordVersion}.zip").each { zip ->
+			copy {
+				from zipTree(zip)
+				into buildBinDir
+			}
+		}
+	}
+}
+
+task bootstrap(dependsOn: ["downloadOnePassword"])
+processTestResources.dependsOn += ["downloadOnePassword"]

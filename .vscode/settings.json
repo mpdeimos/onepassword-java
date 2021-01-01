@@ -15,5 +15,10 @@
 	"java.implementationsCodeLens.enabled": true,
 	"java.semanticHighlighting.enabled": true,
 	"java.signatureHelp.enabled": true,
-	"java.configuration.updateBuildConfiguration": "automatic"
+	"java.configuration.updateBuildConfiguration": "automatic",
+	"[markdown]": {
+		"editor.defaultFormatter": null,
+		"editor.formatOnType": false,
+		"editor.formatOnSave": false
+	}
 }

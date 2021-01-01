@@ -11,8 +11,13 @@ env:
 
 jobs:
   linux:
-    name: Linux Build
-    runs-on: ubuntu-latest
+    name: Compile & Test
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v2
@@ -21,43 +26,6 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-
-    - name: Download 1password
-      run: |
-        mkdir -p .bin
-        echo `realpath .bin` >> $GITHUB_PATH
-        (cd .bin && (curl --silent --show-error --fail https://cache.agilebits.com/dist/1P/op/pkg/v${ONE_PASSWORD_VERSION}/op_linux_amd64_v${ONE_PASSWORD_VERSION}.zip | jar xv) && chmod +x op)
-
-    - name: Verify 1password is executable
-      run: op -v
-
-    - name: Build with Gradle
-      run: ./gradlew build
-
-  windows:
-    name: Windows Build
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up JDK
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-
-    - name: Download 1password
-      shell: bash
-      run: |
-        mkdir -p .bin
-        echo `realpath .bin` >> $GITHUB_PATH
-        (cd .bin && (curl curl --silent --show-error --fail https://cache.agilebits.com/dist/1P/op/pkg/v${ONE_PASSWORD_VERSION}/op_windows_amd64_v${ONE_PASSWORD_VERSION}.zip | jar xv))
-
-    - name: Verify 1password is executable
-      shell: cmd
-      run: |
-        set
-        op.exe -v
 
     - name: Build with Gradle
       run: ./gradlew build
