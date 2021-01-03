@@ -29,3 +29,8 @@ jobs:
 
     - name: Build with Gradle
       run: ./gradlew build
+      env:
+        OP_TEST_SIGNINADDRESS: ${{ secrets.OP_TEST_SIGNINADDRESS }}
+        OP_TEST_EMAILADDRESS: ${{ secrets.OP_TEST_EMAILADDRESS }}
+        OP_TEST_SECRETKEY: ${{ secrets.OP_TEST_SECRETKEY }}
+        OP_TEST_PASSWORD: ${{ secrets.OP_TEST_PASSWORD }}
