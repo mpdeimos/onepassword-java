@@ -3,7 +3,6 @@ package one.password.cli;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
-
 import one.password.Utils;
 
 /** Configuration for the 1password CLI. */
@@ -18,24 +17,27 @@ public class Config {
 		return Optional.ofNullable(executable);
 	}
 
-	public void setExecutable(Path executable) {
+	public Config setExecutable(Path executable) {
 		this.executable = executable;
+		return this;
 	}
 
 	public Optional<String> getShorthand() {
 		return Optional.ofNullable(shorthand);
 	}
 
-	public void setShorthand(String shorthand) {
+	public Config setShorthand(String shorthand) {
 		this.shorthand = shorthand;
+		return this;
 	}
 
 	public Optional<Duration> getTimeout() {
 		return Optional.ofNullable(timeout);
 	}
 
-	public void setTimeout(Duration timeout) {
+	public Config setTimeout(Duration timeout) {
 		this.timeout = timeout;
+		return this;
 	}
 
 	public String getDevice() {

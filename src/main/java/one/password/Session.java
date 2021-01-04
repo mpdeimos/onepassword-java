@@ -1,8 +1,8 @@
 package one.password;
 
 /**
- * Session data for authenticating with 1password. This includes the session
- * token returned after signin and the URL shorthand.
+ * Session data for authenticating with 1password. This includes the session token returned after
+ * signin and the URL shorthand.
  */
 public class Session {
 	private final String session;

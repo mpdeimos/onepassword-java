@@ -1,14 +1,9 @@
 package one.password.cli;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-
-import com.ongres.process.FluentProcess;
-import com.ongres.process.FluentProcessBuilder;
-
 import one.password.Session;
 import one.password.Utils;
 
@@ -23,21 +18,33 @@ public class Op {
 		this.config = config;
 	}
 
-	public Session signin(String signInAddress, String emailAddress, String secretKey, Supplier<String> password)
-			throws IOException {
+	public Session signin(String signInAddress, String emailAddress, String secretKey,
+			Supplier<String> password) throws IOException {
+		return signin(signInAddress, emailAddress, secretKey, password, null);
+	}
+
+	public Session signin(String signInAddress, String emailAddress, String secretKey,
+			Supplier<String> password, Session session) throws IOException {
+		String shorthand = getShorthand(signInAddress);
+
+		String sessionFlag = null;
+		if (session != null) {
+			sessionFlag = Flags.SESSION.is(session.getSession());
+		}
+		OpProcess process = OpProcess.start(config, null, Commands.SIGNIN, signInAddress,
+				emailAddress, secretKey, Flags.SHORTHAND.is(shorthand), sessionFlag, Flags.RAW);
+		process.input(Stream.of(password).map(Supplier::get));
+		return new Session(process.output(), shorthand);
+	}
+
+	private String getShorthand(String signInAddress) throws IOException {
 		Optional<String> optionalShorthand = config.getShorthand();
 		if (!optionalShorthand.isPresent()) {
 			optionalShorthand = Utils.getShorthand(signInAddress);
 		}
 
-		String shorthand = optionalShorthand.orElseThrow(
-				() -> new IOException("Could not determine shorthand from sign in address: " + signInAddress));
-
-		FluentProcess process = createProcess(Commands.SIGNIN, signInAddress, emailAddress, secretKey,
-				Flags.SHORTHAND.is(shorthand), Flags.RAW);
-		process.inputStream(Stream.of(password).map(Supplier::get));
-		String session = process.get();
-		return new Session(session, shorthand);
+		return optionalShorthand.orElseThrow(() -> new IOException(
+				"Could not determine shorthand from sign in address: " + signInAddress));
 	}
 
 	public String version() throws IOException {
@@ -45,27 +52,6 @@ public class Op {
 	}
 
 	public String execute(Object... arguments) throws IOException {
-		return createProcess(arguments).get();
-	}
-
-	private FluentProcess createProcess(Object... arguments) throws IOException {
-		String executable = "op";
-		if (Utils.isWindowsOs()) {
-			executable += ".exe";
-		}
-
-		if (config.getExecutable().isPresent()) {
-			executable = config.getExecutable().get().toAbsolutePath().toString();
-		}
-
-		FluentProcessBuilder builder = FluentProcess.builder(executable);
-		Arrays.stream(arguments).forEach(arg -> builder.arg(arg.toString()));
-		builder.environment("OP_DEVICE", config.getDevice());
-		FluentProcess process = builder.start();
-		if (config.getTimeout().isPresent()) {
-			process.withTimeout(config.getTimeout().get());
-		}
-
-		return process;
+		return OpProcess.start(config, null, arguments).output();
 	}
 }
