@@ -1,7 +1,8 @@
 package one.password.cli;
 
+/** 1password CLI commands */
 public enum Commands {
-	SIGNIN, SIGNOUT;
+	SIGNIN, SIGNOUT, LIST;
 
 	@Override
 	public String toString() {

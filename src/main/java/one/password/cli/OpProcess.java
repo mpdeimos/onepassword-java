@@ -25,14 +25,15 @@ class OpProcess {
 			throws IOException {
 		return wrapExceptions(() -> {
 			String executable = getExecutable(config);
-
 			FluentProcessBuilder builder = FluentProcess.builder(executable);
-			Arrays.stream(arguments).filter(Objects::nonNull)
-					.forEach(arg -> builder.arg(arg.toString()));
+
 			builder.environment("OP_DEVICE", config.getDevice());
 			if (session != null) {
-				builder.environment(session.getEnvironmentVariableName(), session.getShorthand());
+				builder.environment(session.getEnvironmentVariableName(), session.getSession());
 			}
+
+			Arrays.stream(arguments).filter(Objects::nonNull)
+					.forEach(arg -> builder.arg(arg.toString()));
 
 			builder.allowedExitCode(1);
 			FluentProcess process = builder.start();

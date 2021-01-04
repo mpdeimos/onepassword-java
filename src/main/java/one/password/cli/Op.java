@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import one.password.Session;
 import one.password.Utils;
 
+/** Porcelain wrapper around the 1password CLI. */
 public class Op {
 	private final Config config;
 
@@ -18,15 +19,18 @@ public class Op {
 		this.config = config;
 	}
 
+	/** Signs in 1password creating a new session. */
 	public Session signin(String signInAddress, String emailAddress, String secretKey,
 			Supplier<String> password) throws IOException {
 		return signin(signInAddress, emailAddress, secretKey, password, null);
 	}
 
+	/** Signs in 1password reusing the specified session or creating a new one. */
 	public Session signin(String signInAddress, String emailAddress, String secretKey,
 			Supplier<String> password, Session session) throws IOException {
 		String shorthand = getShorthand(signInAddress);
 
+		// The session cannot be passed as env var for login
 		String sessionFlag = null;
 		if (session != null) {
 			sessionFlag = Flags.SESSION.is(session.getSession());
@@ -37,12 +41,28 @@ public class Op {
 		return new Session(process.output(), shorthand);
 	}
 
+	/** Signs out the current session. */
 	public void signout(Session session) throws IOException {
 		execute(session, Commands.SIGNOUT);
 	}
 
+	/** Lists all items of a given entity type. */
+	public String list(Session session, Entities entity) throws IOException {
+		return execute(session, Commands.LIST, entity);
+	}
+
+	/** Prints the version number of the installed 1password CLI. */
 	public String version() throws IOException {
-		return execute(Flags.VERSION);
+		return execute(null, Flags.VERSION);
+	}
+
+	/**
+	 * Executes an arbitrary 1password CLI command. Arguments are converted to strings using
+	 * {@link #toString()}. The session may be null in order to use a not use authentication or
+	 * manually handle it via {@link Flags#SESSION}.
+	 */
+	public String execute(Session session, Object... arguments) throws IOException {
+		return OpProcess.start(config, session, arguments).output();
 	}
 
 	private String getShorthand(String signInAddress) throws IOException {
@@ -55,11 +75,4 @@ public class Op {
 				"Could not determine shorthand from sign in address: " + signInAddress));
 	}
 
-	public String execute(Object... arguments) throws IOException {
-		return execute(config, (Session) null, arguments);
-	}
-
-	public String execute(Session session, Object... arguments) throws IOException {
-		return OpProcess.start(config, session, arguments).output();
-	}
 }

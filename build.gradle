@@ -15,7 +15,8 @@ repositories {
 
 dependencies {
 	implementation 'com.ongres:fluent-process:1.0.1'
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.2'
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+	testImplementation 'org.junit.jupiter:junit-jupiter-params:5.7.0'
 	testImplementation 'org.assertj:assertj-core:3.18.1'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }

@@ -5,7 +5,11 @@ import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import one.password.Session;
 import one.password.TestCredentials;
 import one.password.TestUtils;
@@ -67,6 +71,35 @@ public class OpTest {
 		Session session2 = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
 				credentials.getSecretKey(), credentials::getPassword);
 		Assertions.assertThat(session2).usingRecursiveComparison().isNotEqualTo(session);
+	}
+
+	@Nested
+	class WithSession {
+		private Op op;
+		private Session session;
+
+		@BeforeEach
+		void login() throws IOException {
+			op = new Op(createConfig());
+			session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+					credentials.getSecretKey(), credentials::getPassword);
+		}
+
+		@Nested
+		class Do {
+
+			@ParameterizedTest
+			@EnumSource(Entities.class)
+			void smokeTestList(Entities entity) throws IOException {
+				op.list(session, entity);
+			}
+
+			@Test
+			void testListUsers() throws IOException {
+				String users = op.list(session, Entities.USERS);
+				Assertions.assertThat(users).contains(credentials.getEmailAddress());
+			}
+		}
 	}
 
 	private Config createConfig() {
