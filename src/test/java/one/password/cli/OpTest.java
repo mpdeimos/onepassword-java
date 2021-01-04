@@ -58,6 +58,17 @@ public class OpTest {
 						"foo@bar.com", credentials.getSecretKey(), () -> "xxx"));
 	}
 
+	@Test
+	void testSignout() throws IOException {
+		Op op = new Op(createConfig());
+		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+				credentials.getSecretKey(), credentials::getPassword);
+		op.signout(session);
+		Session session2 = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+				credentials.getSecretKey(), credentials::getPassword);
+		Assertions.assertThat(session2).usingRecursiveComparison().isNotEqualTo(session);
+	}
+
 	private Config createConfig() {
 		Config config = new Config();
 		String executable = "build/bin/op";

@@ -37,6 +37,14 @@ public class Op {
 		return new Session(process.output(), shorthand);
 	}
 
+	public void signout(Session session) throws IOException {
+		execute(session, Commands.SIGNOUT);
+	}
+
+	public String version() throws IOException {
+		return execute(Flags.VERSION);
+	}
+
 	private String getShorthand(String signInAddress) throws IOException {
 		Optional<String> optionalShorthand = config.getShorthand();
 		if (!optionalShorthand.isPresent()) {
@@ -47,11 +55,11 @@ public class Op {
 				"Could not determine shorthand from sign in address: " + signInAddress));
 	}
 
-	public String version() throws IOException {
-		return execute(Flags.VERSION);
+	public String execute(Object... arguments) throws IOException {
+		return execute(config, (Session) null, arguments);
 	}
 
-	public String execute(Object... arguments) throws IOException {
-		return OpProcess.start(config, null, arguments).output();
+	public String execute(Session session, Object... arguments) throws IOException {
+		return OpProcess.start(config, session, arguments).output();
 	}
 }
