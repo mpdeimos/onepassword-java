@@ -1,8 +1,6 @@
 package one.password.cli;
 
 import java.io.IOException;
-import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -11,6 +9,7 @@ import java.util.stream.Stream;
 import com.ongres.process.FluentProcess;
 import com.ongres.process.FluentProcessBuilder;
 
+import one.password.Session;
 import one.password.Utils;
 
 public class Op {
@@ -24,11 +23,21 @@ public class Op {
 		this.config = config;
 	}
 
-	public String signin(String signInAddress, String emailAddress, String secretKey, Supplier<String> password)
+	public Session signin(String signInAddress, String emailAddress, String secretKey, Supplier<String> password)
 			throws IOException {
-		FluentProcess process = createProcess(Commands.SIGNIN, signInAddress, emailAddress, secretKey, Flags.RAW);
+		Optional<String> optionalShorthand = config.getShorthand();
+		if (!optionalShorthand.isPresent()) {
+			optionalShorthand = Utils.getShorthand(signInAddress);
+		}
+
+		String shorthand = optionalShorthand.orElseThrow(
+				() -> new IOException("Could not determine shorthand from sign in address: " + signInAddress));
+
+		FluentProcess process = createProcess(Commands.SIGNIN, signInAddress, emailAddress, secretKey,
+				Flags.SHORTHAND.is(shorthand), Flags.RAW);
 		process.inputStream(Stream.of(password).map(Supplier::get));
-		return process.get();
+		String session = process.get();
+		return new Session(session, shorthand);
 	}
 
 	public String version() throws IOException {
@@ -41,7 +50,7 @@ public class Op {
 
 	private FluentProcess createProcess(Object... arguments) throws IOException {
 		String executable = "op";
-		if (Utils.IS_WINDOWS) {
+		if (Utils.isWindowsOs()) {
 			executable += ".exe";
 		}
 
@@ -58,31 +67,5 @@ public class Op {
 		}
 
 		return process;
-	}
-
-	public static class Config {
-		private static final String DEFAULT_DEVICE = Utils.randomBase32(26);
-		private Path executable;
-		private Duration timeout = Duration.ofSeconds(10);
-
-		public Optional<Path> getExecutable() {
-			return Optional.ofNullable(executable);
-		}
-
-		public Optional<Duration> getTimeout() {
-			return Optional.ofNullable(timeout);
-		}
-
-		public String getDevice() {
-			return DEFAULT_DEVICE;
-		}
-
-		public void setExecutable(Path executable) {
-			this.executable = executable;
-		}
-
-		public void setTimeout(Duration timeout) {
-			this.timeout = timeout;
-		}
 	}
 }
