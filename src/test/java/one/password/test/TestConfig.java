@@ -4,7 +4,10 @@ import java.nio.file.Paths;
 import one.password.Config;
 import one.password.util.Utils;
 
-/** Common configuration used for tests. */
+/**
+ * Common configuration used for tests. Uses the downloaded op executable during bootstrap and sets
+ * the device ID to a fixed value.
+ */
 public class TestConfig extends Config {
 	public final TestCredentials credentials;
 
@@ -16,6 +19,9 @@ public class TestConfig extends Config {
 			executable += ".exe";
 		}
 		setExecutable(Paths.get(executable));
+		TestUtils.assertNoIOException(() -> setDevice(
+				TestUtils.getTestEnvironment().getProperty("OP_TEST_DEVICE", null)));
 	}
+
 
 }

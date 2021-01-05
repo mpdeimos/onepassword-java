@@ -34,3 +34,4 @@ jobs:
         OP_TEST_EMAILADDRESS: ${{ secrets.OP_TEST_EMAILADDRESS }}
         OP_TEST_SECRETKEY: ${{ secrets.OP_TEST_SECRETKEY }}
         OP_TEST_PASSWORD: ${{ secrets.OP_TEST_PASSWORD }}
+        OP_TEST_DEVICE: ${{ secrets.OP_TEST_DEVICE }}

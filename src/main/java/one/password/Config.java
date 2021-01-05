@@ -7,11 +7,11 @@ import one.password.util.Utils;
 
 /** Configuration for the 1password CLI. */
 public class Config {
-	// TODO make configurable
 	private static final String DEFAULT_DEVICE = Utils.randomBase32(26);
 	private String shorthand;
 	private Path executable;
 	private Duration timeout = Duration.ofSeconds(10);
+	private String device = DEFAULT_DEVICE;
 
 	public Optional<Path> getExecutable() {
 		return Optional.ofNullable(executable);
@@ -41,6 +41,30 @@ public class Config {
 	}
 
 	public String getDevice() {
-		return DEFAULT_DEVICE;
+		return device;
 	}
+
+	/**
+	 * Sets the device id. Must be a lowercase string of length 26 from the Base32 alphabet. Pass
+	 * null in order to reset to an auto-generated value.
+	 */
+	public Config setDevice(String device) throws IllegalArgumentException {
+		if (device == null) {
+			device = DEFAULT_DEVICE;
+		}
+
+		if (device.length() != DEFAULT_DEVICE.length()) {
+			throw new IllegalArgumentException(
+					"The device id must have a string length of " + DEFAULT_DEVICE.length());
+		}
+
+		if (!Utils.isBase32(device)) {
+			throw new IllegalArgumentException(
+					"The device id is no valid Base32 string: " + device);
+		}
+
+		this.device = device;
+		return this;
+	}
+
 }

@@ -49,4 +49,9 @@ public final class Utils {
 		String shorthand = subdomain.replace('-', '_').toLowerCase();
 		return Optional.of(shorthand);
 	}
+
+	/** Tests whether the generated device id is from the Base32 alphabet. */
+	public static boolean isBase32(String string) {
+		return string.chars().allMatch(c -> Arrays.stream(BASE32_ALPHABET).anyMatch(a -> a == c));
+	}
 }
