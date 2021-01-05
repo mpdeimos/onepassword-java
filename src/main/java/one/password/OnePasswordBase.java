@@ -20,43 +20,19 @@ public abstract class OnePasswordBase {
 		this.session = session;
 	}
 
-	/** Lists all users. */
-	public User[] listUsers() throws IOException {
-		return list(User.class);
-	}
-
-	/** Lists all groups. */
-	public Group[] listGroups() throws IOException {
-		return list(Group.class);
-	}
-
-	/** Lists all vaults. */
-	public Vault[] listVaults() throws IOException {
-		return list(Vault.class);
-	}
-
-	private <T extends Entity> T[] list(Class<T> entity) throws IOException {
-		String json = execute(() -> op.list(session, entity));
-		return Json.deserialize(json, Utils.arrayType(entity));
-	}
-
-	/** Creates a new vault with name. */
-	public Vault createVault(String name) throws IOException {
-		String json = execute(() -> op.create(session, Vault.class, name));
-		return Json.deserialize(json, Vault.class);
-	}
-
-	/** Creates a new vault with name and description. */
-	public Vault createVault(String name, String description) throws IOException {
-		String json = execute(
-				() -> op.create(session, Vault.class, name, Flags.DESCRIPTION.is(description)));
-		return Json.deserialize(json, Vault.class);
+	/** Returns the group with the given name or uuid. Fails if the name is not unique. */
+	public Group getGroup(String nameOrUuid) throws IOException {
+		return get(Group.class, nameOrUuid);
 	}
 
 	/** Returns the vault with the given name or uuid. Fails if the name is not unique. */
 	public Vault getVault(String nameOrUuid) throws IOException {
-		String json = execute(() -> op.get(session, Vault.class, nameOrUuid));
-		return Json.deserialize(json, Vault.class);
+		return get(Vault.class, nameOrUuid);
+	}
+
+	private <T extends Entity> T get(Class<T> entity, String nameOrUuid) throws IOException {
+		String json = execute(() -> op.get(session, entity, nameOrUuid));
+		return Json.deserialize(json, entity);
 	}
 
 	/** Saves modification to the given vault. */
@@ -65,20 +41,69 @@ public abstract class OnePasswordBase {
 				Flags.NAME.is(vault.getName())));
 	}
 
-	/** Deletes the vault. */
+	/** Deletes a group. */
+	public void deleteGroup(Group group) throws IOException {
+		delete(group);
+	}
+
+	/** Deletes a vault. */
 	public void deleteVault(Vault vault) throws IOException {
-		execute(() -> op.delete(session, Vault.class, vault.getUuid()));
+		delete(vault);
+	}
+
+	public void delete(Entity entity) throws IOException {
+		execute(() -> op.delete(session, entity.getClass(), entity.getUuid()));
+	}
+
+	public EntityCommand<User> users() {
+		return new EntityCommand<>(User.class);
+	}
+
+	public EntityCommand<Group> groups() {
+		return new EntityCommand<>(Group.class);
+	}
+
+	public EntityCommand<Vault> vaults() {
+		return new EntityCommand<>(Vault.class);
+	}
+
+	public Op op() {
+		return op;
+	}
+
+	public Session session() {
+		return session;
 	}
 
 	protected String execute(Op.Action<String> action) throws IOException {
 		return action.execute();
 	}
 
-	public Op getOp() {
-		return op;
-	}
+	/** Commands for manipulating an entity. */
+	public class EntityCommand<T extends Entity> {
+		private Class<T> entity;
 
-	public Session getSession() {
-		return session;
+		EntityCommand(Class<T> entity) {
+			this.entity = entity;
+		}
+
+		/** Creates an entity. */
+		public T create(String name) throws IOException {
+			return create(name, null);
+		}
+
+		/** Creates an entity. */
+		public T create(String name, String description) throws IOException {
+			String json = execute(
+					() -> op.create(session, entity, name, Flags.DESCRIPTION.is(description)));
+			return Json.deserialize(json, entity);
+		}
+
+		/** Lists all entities */
+		private T[] list() throws IOException {
+			String json = execute(() -> op.list(session, entity));
+			return Json.deserialize(json, Utils.arrayType(entity));
+		}
+
 	}
 }

@@ -46,6 +46,68 @@ class OnePasswordTest {
 	}
 
 	@Nested
+	class Groups {
+		@BeforeEach
+		void cleanup(OnePassword op) {
+			Arrays.stream(TestUtils.assertNoIOException(() -> op.listGroups()))
+					.filter(group -> group.getName().startsWith(TEST_ITEM_PREFIX))
+					.forEach(group -> TestUtils.assertNoIOException(() -> {
+						op.deleteGroup(group);
+						return null;
+					}));
+		}
+
+		@Test
+		void createListGetDelete(OnePassword op) throws IOException {
+			Group group = op.createGroup(withTestPrefix("group"));
+			Assertions.assertThat(group.getName()).isEqualTo(withTestPrefix("group"));
+			Assertions.assertThat(group.getDescription()).isEmpty();
+
+			Assertions.assertThat(op.listGroups())
+					.anyMatch(v -> v.getUuid().equals(group.getUuid()));
+
+			Assertions.assertThat(op.getGroup(group.getName()))
+					.matches(v -> v.getUuid().equals(group.getUuid()));
+			Assertions.assertThat(op.getGroup(group.getUuid()))
+					.matches(v -> v.getUuid().equals(group.getUuid()));
+
+			op.deleteGroup(group);
+			Assertions.assertThat(op.listGroups())
+					.noneMatch(v -> v.getUuid().equals(group.getUuid()));
+
+			Assertions.assertThatIOException().isThrownBy(() -> op.deleteGroup(group));
+		}
+
+		@Test
+		void withDescription(OnePassword op) throws IOException {
+			Group group = op.createGroup(withTestPrefix("group"), "some description");
+			Assertions.assertThat(group.getName()).isEqualTo(withTestPrefix("group"));
+			Assertions.assertThat(group.getDescription()).isEqualTo("some description");
+			op.deleteGroup(group);
+		}
+
+		// @Test
+		// void edit(OnePassword op) throws IOException {
+		// Group vault = op.createVault(withTestPrefix("vault"));
+		// vault.setName(withTestPrefix("edited"));
+		// op.editVault(vault);
+		// Assertions.assertThat(op.getVault(vault.getUuid()).getName())
+		// .isEqualTo(withTestPrefix("edited"));
+		// op.deleteVault(vault);
+		// Assertions.assertThatIOException().isThrownBy(() -> op.editVault(vault));
+		// }
+
+		@Test
+		void getByNameFailsWithIdenticalName(OnePassword op) throws IOException {
+			Group group = op.createGroup(withTestPrefix("group"));
+			Group group2 = op.createGroup(withTestPrefix("group"));
+			Assertions.assertThatIOException().isThrownBy(() -> op.getGroup(group.getName()));
+			op.deleteGroup(group);
+			op.deleteGroup(group2);
+		}
+	}
+
+	@Nested
 	class Vaults {
 		@BeforeEach
 		void cleanup(OnePassword op) {
