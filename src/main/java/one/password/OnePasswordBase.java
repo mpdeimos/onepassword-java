@@ -24,11 +24,7 @@ public abstract class OnePasswordBase {
 		return new Gson().fromJson(json, User[].class);
 	}
 
-	protected String execute(OpAction action) throws IOException {
+	protected String execute(Op.Action<String> action) throws IOException {
 		return action.execute();
-	}
-
-	protected interface OpAction {
-		String execute() throws IOException;
 	}
 }

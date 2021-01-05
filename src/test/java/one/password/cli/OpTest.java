@@ -4,39 +4,30 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import one.password.Config;
 import one.password.Session;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
 
 public class OpTest {
-	private final TestCredentials credentials;
-
-	OpTest() throws IOException {
-		credentials = new TestCredentials();
+	@Test
+	void testGetVersion(Op op) throws IOException {
+		Assertions.assertThat(op.version()).isEqualTo(TestUtils.getOnePasswordVersion());
 	}
 
 	@Test
-	void testGetVersion() throws IOException {
-		Assertions.assertThat(new Op(TestUtils.createConfig()).version())
-				.isEqualTo(TestUtils.getOnePasswordVersion());
+	void testTimeout(Config config) {
+		Assertions.assertThatIOException()
+				.isThrownBy(() -> new Op(config.setTimeout(Duration.ofNanos(1))).version());
 	}
 
 	@Test
-	void testTimeout() {
-		Assertions.assertThatIOException().isThrownBy(
-				() -> new Op(TestUtils.createConfig().setTimeout(Duration.ofNanos(1))).version());
-	}
-
-	@Test
-	void testSignin() throws IOException {
-		Session session = new Op(TestUtils.createConfig()).signin(credentials.getSignInAddress(),
-				credentials.getEmailAddress(), credentials.getSecretKey(),
-				credentials::getPassword);
+	void testSignin(Op op, TestCredentials credentials) throws IOException {
+		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+				credentials.getSecretKey(), credentials::getPassword);
 		Assertions.assertThat(session.getSession()).hasLineCount(1).hasSize(43);
 		Assertions.assertThat(session.getShorthand())
 				.isEqualTo(URI.create(credentials.getSignInAddress()).getHost().split("\\.")[0]
@@ -44,60 +35,42 @@ public class OpTest {
 	}
 
 	@Test
-	void testSigninTwiceYieldsSameSession() throws IOException {
-		Op op = new Op(TestUtils.createConfig());
-		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword);
-		Session session2 = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword, session);
-		Assertions.assertThat(session2).usingRecursiveComparison().isEqualTo(session);
+	void testSigninTwiceYieldsSameSession(Op op, TestCredentials credentials, Session session)
+			throws IOException {
+		Session newSession =
+				op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+						credentials.getSecretKey(), credentials::getPassword, session);
+		Assertions.assertThat(newSession).usingRecursiveComparison().isEqualTo(session);
 	}
 
 	@Test
-	void testSigninWithWrongCredentials() throws IOException {
+	void testSigninWithWrongCredentials(Op op, TestCredentials credentials) throws IOException {
 		Assertions.assertThatIOException()
-				.isThrownBy(() -> new Op(TestUtils.createConfig()).signin(
-						credentials.getSignInAddress(), "foo@bar.com", credentials.getSecretKey(),
-						() -> "xxx"));
+				.isThrownBy(() -> op.signin(credentials.getSignInAddress(), "foo@bar.com",
+						credentials.getSecretKey(), () -> "xxx"));
 	}
 
 	@Test
-	void testSignout() throws IOException {
-		Op op = new Op(TestUtils.createConfig());
+	void testSignout(Op op, TestCredentials credentials) throws IOException {
 		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
 				credentials.getSecretKey(), credentials::getPassword);
 		op.signout(session);
-		Session session2 = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword);
-		Assertions.assertThat(session2).usingRecursiveComparison().isNotEqualTo(session);
+		Session newSession =
+				op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+						credentials.getSecretKey(), credentials::getPassword);
+		Assertions.assertThat(newSession).usingRecursiveComparison().isNotEqualTo(session);
 	}
 
-	@Nested
-	class WithSession {
-		private Op op;
-		private Session session;
 
-		@BeforeEach
-		void login() throws IOException {
-			op = new Op(TestUtils.createConfig());
-			session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-					credentials.getSecretKey(), credentials::getPassword);
-		}
+	@ParameterizedTest
+	@EnumSource(Entities.class)
+	void smokeTestList(Entities entity, Op op, Session session) throws IOException {
+		op.list(session, entity);
+	}
 
-		@Nested
-		class Do {
-
-			@ParameterizedTest
-			@EnumSource(Entities.class)
-			void smokeTestList(Entities entity) throws IOException {
-				op.list(session, entity);
-			}
-
-			@Test
-			void testListUsers() throws IOException {
-				String users = op.list(session, Entities.USERS);
-				Assertions.assertThat(users).contains(credentials.getEmailAddress());
-			}
-		}
+	@Test
+	void testListUsers(Op op, Session session, TestCredentials credentials) throws IOException {
+		String users = op.list(session, Entities.USERS);
+		Assertions.assertThat(users).contains(credentials.getEmailAddress());
 	}
 }

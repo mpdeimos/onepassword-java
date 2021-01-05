@@ -75,4 +75,10 @@ public class Op {
 				"Could not determine shorthand from sign in address: " + signInAddress));
 	}
 
+	/** An action of the op executable. */
+	public interface Action<T> {
+		/** Executes the action. */
+		T execute() throws IOException;
+	}
+
 }

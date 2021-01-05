@@ -51,7 +51,7 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 	}
 
 	@Override
-	protected String execute(OpAction action) throws IOException {
+	protected String execute(Op.Action<String> action) throws IOException {
 		try {
 			return super.execute(action);
 		} catch (IOException e) {
@@ -60,24 +60,6 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 			}
 			signin();
 			return super.execute(action);
-		}
-	}
-
-	/**
-	 * High-level 1password CLI Java binding that reuses an existing session, but does not
-	 * auto-renew it.
-	 */
-	public static class PreAuthenticated extends OnePasswordBase {
-		PreAuthenticated(OnePasswordBase api) {
-			super(api.op, api.session);
-		}
-
-		PreAuthenticated(Session session) {
-			this(null, session);
-		}
-
-		PreAuthenticated(Config config, Session session) {
-			super(new Op(config), session);
 		}
 	}
 }

@@ -8,5 +8,8 @@ build
 .project
 bin
 
+# IntelliJ
+.idea
+
 # Test credentials
 .test.env

@@ -8,8 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
-import one.password.Config;
-import one.password.cli.Utils;
+import org.assertj.core.api.Assertions;
+import one.password.cli.Op;
 
 /** Utility methods for unit testing. */
 public class TestUtils {
@@ -42,14 +42,13 @@ public class TestUtils {
 		}
 	}
 
-	/** Creates a configuration with the 1password executable located in the build output. */
-	public static Config createConfig() {
-		Config config = new Config();
-		String executable = "build/bin/op";
-		if (Utils.isWindowsOs()) {
-			executable += ".exe";
+	/** Asserts that the action does not throw an {@link java.io.IOException}. */
+	public static <T> T assertNoIOException(Op.Action<T> action) {
+		try {
+			return action.execute();
+		} catch (IOException e) {
+			Assertions.assertThat(e).doesNotThrowAnyException();
+			return null;
 		}
-		config.setExecutable(Paths.get(executable));
-		return config;
 	}
 }

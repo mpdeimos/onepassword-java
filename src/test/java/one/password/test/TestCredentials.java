@@ -1,15 +1,17 @@
 package one.password.test;
 
-import java.io.IOException;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 
+/**
+ * Loads credentials that are needed for test execution from the environment or a .test.env file.
+ */
 public class TestCredentials {
 
 	private final Properties environment;
 
-	public TestCredentials() throws IOException {
-		environment = TestUtils.getTestEnvironment();
+	public TestCredentials() {
+		environment = TestUtils.assertNoIOException(TestUtils::getTestEnvironment);
 
 		Assertions.assertThat(getSignInAddress()).isNotEmpty();
 		Assertions.assertThat(getEmailAddress()).isNotEmpty();

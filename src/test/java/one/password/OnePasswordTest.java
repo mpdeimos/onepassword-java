@@ -3,29 +3,23 @@ package one.password;
 import java.io.IOException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
-import one.password.test.TestUtils;
 
 class OnePasswordTest {
 
 	@Test
-	void testListUsers() throws IOException {
-		TestCredentials credentials = new TestCredentials();
-		try (OnePassword op = new OnePassword(TestUtils.createConfig(),
-				credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword)) {
-			User[] users = op.listUsers();
-			Assertions.assertThat(users).isNotEmpty();
-		}
+	void testListUsers(OnePasswordPreAuthenticated op, TestCredentials credentials)
+			throws IOException {
+		Assertions.assertThat(op.listUsers())
+				.anyMatch(user -> user.email.equals(credentials.getEmailAddress()));
 	}
 
 	@Test
-	void testAutoReSignIn() throws IOException {
-		TestCredentials credentials = new TestCredentials();
-		Config config = TestUtils.createConfig();
-		try (OnePassword op = new OnePassword(config, credentials.getSignInAddress(),
-				credentials.getEmailAddress(), credentials.getSecretKey(),
-				credentials::getPassword)) {
+	void testAutoReSignIn(TestConfig config) throws IOException {
+		try (OnePassword op = new OnePassword(config, config.credentials.getSignInAddress(),
+				config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
+				config.credentials::getPassword)) {
 			Session initialSession = op.session;
 			op.op.signout(initialSession);
 			User[] users = op.listUsers();
