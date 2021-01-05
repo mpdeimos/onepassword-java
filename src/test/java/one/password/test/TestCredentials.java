@@ -1,8 +1,7 @@
-package one.password;
+package one.password.test;
 
 import java.io.IOException;
 import java.util.Properties;
-
 import org.assertj.core.api.Assertions;
 
 public class TestCredentials {

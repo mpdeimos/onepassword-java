@@ -2,7 +2,6 @@ package one.password.cli;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Paths;
 import java.time.Duration;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,9 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import one.password.Session;
-import one.password.TestCredentials;
-import one.password.TestUtils;
-import one.password.Utils;
+import one.password.test.TestCredentials;
+import one.password.test.TestUtils;
 
 public class OpTest {
 	private final TestCredentials credentials;
@@ -24,19 +22,19 @@ public class OpTest {
 
 	@Test
 	void testGetVersion() throws IOException {
-		Assertions.assertThat(new Op(createConfig()).version())
+		Assertions.assertThat(new Op(TestUtils.createConfig()).version())
 				.isEqualTo(TestUtils.getOnePasswordVersion());
 	}
 
 	@Test
 	void testTimeout() {
-		Assertions.assertThatIOException()
-				.isThrownBy(() -> new Op(createConfig().setTimeout(Duration.ofNanos(1))).version());
+		Assertions.assertThatIOException().isThrownBy(
+				() -> new Op(TestUtils.createConfig().setTimeout(Duration.ofNanos(1))).version());
 	}
 
 	@Test
 	void testSignin() throws IOException {
-		Session session = new Op(createConfig()).signin(credentials.getSignInAddress(),
+		Session session = new Op(TestUtils.createConfig()).signin(credentials.getSignInAddress(),
 				credentials.getEmailAddress(), credentials.getSecretKey(),
 				credentials::getPassword);
 		Assertions.assertThat(session.getSession()).hasLineCount(1).hasSize(43);
@@ -47,7 +45,7 @@ public class OpTest {
 
 	@Test
 	void testSigninTwiceYieldsSameSession() throws IOException {
-		Op op = new Op(createConfig());
+		Op op = new Op(TestUtils.createConfig());
 		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
 				credentials.getSecretKey(), credentials::getPassword);
 		Session session2 = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
@@ -58,13 +56,14 @@ public class OpTest {
 	@Test
 	void testSigninWithWrongCredentials() throws IOException {
 		Assertions.assertThatIOException()
-				.isThrownBy(() -> new Op(createConfig()).signin(credentials.getSignInAddress(),
-						"foo@bar.com", credentials.getSecretKey(), () -> "xxx"));
+				.isThrownBy(() -> new Op(TestUtils.createConfig()).signin(
+						credentials.getSignInAddress(), "foo@bar.com", credentials.getSecretKey(),
+						() -> "xxx"));
 	}
 
 	@Test
 	void testSignout() throws IOException {
-		Op op = new Op(createConfig());
+		Op op = new Op(TestUtils.createConfig());
 		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
 				credentials.getSecretKey(), credentials::getPassword);
 		op.signout(session);
@@ -80,7 +79,7 @@ public class OpTest {
 
 		@BeforeEach
 		void login() throws IOException {
-			op = new Op(createConfig());
+			op = new Op(TestUtils.createConfig());
 			session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
 					credentials.getSecretKey(), credentials::getPassword);
 		}
@@ -100,15 +99,5 @@ public class OpTest {
 				Assertions.assertThat(users).contains(credentials.getEmailAddress());
 			}
 		}
-	}
-
-	private Config createConfig() {
-		Config config = new Config();
-		String executable = "build/bin/op";
-		if (Utils.isWindowsOs()) {
-			executable += ".exe";
-		}
-		config.setExecutable(Paths.get(executable));
-		return config;
 	}
 }

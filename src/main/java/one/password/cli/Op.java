@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import one.password.Config;
 import one.password.Session;
-import one.password.Utils;
 
 /** Porcelain wrapper around the 1password CLI. */
 public class Op {

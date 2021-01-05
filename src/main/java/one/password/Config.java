@@ -1,9 +1,9 @@
-package one.password.cli;
+package one.password;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
-import one.password.Utils;
+import one.password.cli.Utils;
 
 /** Configuration for the 1password CLI. */
 public class Config {

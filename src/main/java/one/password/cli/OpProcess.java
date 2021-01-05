@@ -9,8 +9,8 @@ import java.util.stream.Stream;
 import com.ongres.process.FluentProcess;
 import com.ongres.process.FluentProcessBuilder;
 import com.ongres.process.Output;
+import one.password.Config;
 import one.password.Session;
-import one.password.Utils;
 
 /** Wraps execution of the 1password CLI using FluentProcess and strict exception handling. */
 class OpProcess {
