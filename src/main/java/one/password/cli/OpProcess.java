@@ -22,7 +22,7 @@ class OpProcess {
 	}
 
 	/** Starts the op executable with environment set from the configuration. */
-	public static OpProcess start(Config config, Session session, Object... arguments)
+	public static OpProcess start(Config config, Session session, String... arguments)
 			throws IOException {
 		return wrapExceptions(() -> {
 			String executable = getExecutable(config);
@@ -33,8 +33,7 @@ class OpProcess {
 				builder.environment(session.getEnvironmentVariableName(), session.getSession());
 			}
 
-			Arrays.stream(arguments).filter(Objects::nonNull)
-					.forEach(arg -> builder.arg(arg.toString()));
+			Arrays.stream(arguments).filter(Objects::nonNull).forEach(builder::arg);
 
 			builder.allowedExitCode(1);
 			FluentProcess process = builder.start();

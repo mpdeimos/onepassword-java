@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -29,9 +30,15 @@ public class Json {
 	private static Gson GSON = new GsonBuilder()
 			.registerTypeAdapter(ZonedDateTime.class, ZONED_DATE_TIME_ADAPTER).create();
 
-	/** Deserializes a JSON String to a Java Object. */
-	public static <T> T deserialize(String json, Class<T> clazz) {
-		return GSON.fromJson(json, clazz);
+	/**
+	 * Deserializes a JSON String to a Java Object.
+	 */
+	public static <T> T deserialize(String json, Class<T> clazz) throws IOException {
+		try {
+			return GSON.fromJson(json, clazz);
+		} catch (JsonSyntaxException e) {
+			throw new IOException(e.getMessage() + "\nJson:\n" + json);
+		}
 	}
 
 	/** Serializes a Java Object to Json. */

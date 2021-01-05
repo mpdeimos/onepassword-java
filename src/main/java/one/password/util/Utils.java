@@ -54,4 +54,38 @@ public final class Utils {
 	public static boolean isBase32(String string) {
 		return string.chars().allMatch(c -> Arrays.stream(BASE32_ALPHABET).anyMatch(a -> a == c));
 	}
+
+	/** Returns the array type of a class. */
+	@SuppressWarnings("unchecked")
+	public static <T> Class<T[]> arrayType(Class<T> type) {
+		try {
+
+			return (Class<T[]>) Class.forName("[L" + type.getCanonicalName() + ";");
+		} catch (ClassNotFoundException e) {
+			throw new AssertionError(
+					"Cannot create array type from class " + type.getCanonicalName());
+		}
+	}
+
+	public static String[] asArray(String a, String... more) {
+		return combineSwitched(more, a);
+	}
+
+	public static String[] asArray(String a, String b, String... more) {
+		return combineSwitched(more, combine(a, b));
+	}
+
+	public static String[] asArray(String a, String b, String c, String... more) {
+		return combineSwitched(more, combine(a, b, c));
+	}
+
+	private static String[] combine(String... more) {
+		return more;
+	}
+
+	private static String[] combineSwitched(String[] after, String... before) {
+		String[] copy = Arrays.copyOf(before, before.length + after.length);
+		System.arraycopy(after, 0, copy, before.length, after.length);
+		return copy;
+	}
 }
