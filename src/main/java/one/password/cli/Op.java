@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import one.password.Config;
 import one.password.Session;
+import one.password.util.Utils;
 
 /** Porcelain wrapper around the 1password CLI. */
 public class Op {

@@ -3,7 +3,7 @@ package one.password;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
-import one.password.cli.Utils;
+import one.password.util.Utils;
 
 /** Configuration for the 1password CLI. */
 public class Config {

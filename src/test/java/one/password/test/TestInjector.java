@@ -10,8 +10,8 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import one.password.Config;
+import one.password.OnePassword;
 import one.password.OnePasswordBase;
-import one.password.OnePasswordPreAuthenticated;
 import one.password.Session;
 import one.password.cli.Op;
 
@@ -26,24 +26,16 @@ public class TestInjector implements ParameterResolver {
 
 		CONFIG(Config.class, () -> new TestConfig(create(TestCredentials.class))),
 
-		OP(Op.class, Suppliers.memoize(() -> {
-			TestConfig config = create(TestConfig.class);
-			return new Op(config);
-		})),
-
-		SESSION(Session.class, Suppliers.memoize(() -> {
-			TestCredentials credentials = create(TestCredentials.class);
-			Op op = create(Op.class);
-			return TestUtils.assertNoIOException(
-					() -> op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-							credentials.getSecretKey(), credentials::getPassword));
-		})),
-
 		ONE_PASSWORD(OnePasswordBase.class, Suppliers.memoize(() -> {
-			Config config = create(Config.class);
-			Session session = create(Session.class);
-			return new OnePasswordPreAuthenticated(config, session);
-		}));
+			TestConfig config = create(TestConfig.class);
+			return TestUtils.assertNoIOException(() -> new OnePassword(config,
+					config.credentials.getSignInAddress(), config.credentials.getEmailAddress(),
+					config.credentials.getSecretKey(), config.credentials::getPassword));
+		})),
+
+		OP(Op.class, Suppliers.memoize(() -> create(OnePassword.class).getOp())),
+
+		SESSION(Session.class, Suppliers.memoize(() -> create(OnePassword.class).getSession()));
 
 		private final Class<?> clazz;
 		private final Supplier<?> constructor;

@@ -73,4 +73,16 @@ public class OpTest {
 		String users = op.list(session, Entities.USERS);
 		Assertions.assertThat(users).contains(credentials.getEmailAddress());
 	}
+
+	@Test
+	void testListGroups(Op op, Session session) throws IOException {
+		String groups = op.list(session, Entities.GROUPS);
+		Assertions.assertThat(groups).contains("Administrators");
+	}
+
+	@Test
+	void testListVaults(Op op, Session session) throws IOException {
+		String groups = op.list(session, Entities.VAULTS);
+		Assertions.assertThat(groups).contains("Shared");
+	}
 }

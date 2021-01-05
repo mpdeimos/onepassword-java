@@ -2,7 +2,7 @@ package one.password.test;
 
 import java.nio.file.Paths;
 import one.password.Config;
-import one.password.cli.Utils;
+import one.password.util.Utils;
 
 /** Common configuration used for tests. */
 public class TestConfig extends Config {
