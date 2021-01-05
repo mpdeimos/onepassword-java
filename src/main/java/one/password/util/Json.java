@@ -27,7 +27,7 @@ public class Json {
 			};
 
 
-	private static Gson GSON = new GsonBuilder()
+	private static final Gson GSON = new GsonBuilder()
 			.registerTypeAdapter(ZonedDateTime.class, ZONED_DATE_TIME_ADAPTER).create();
 
 	/**
@@ -37,7 +37,7 @@ public class Json {
 		try {
 			return GSON.fromJson(json, clazz);
 		} catch (JsonSyntaxException e) {
-			throw new IOException(e.getMessage() + "\nJson:\n" + json);
+			throw new IOException(e.getMessage() + "\nJson:\n" + json, e);
 		}
 	}
 

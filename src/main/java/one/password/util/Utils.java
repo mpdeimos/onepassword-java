@@ -63,7 +63,7 @@ public final class Utils {
 			return (Class<T[]>) Class.forName("[L" + type.getCanonicalName() + ";");
 		} catch (ClassNotFoundException e) {
 			throw new AssertionError(
-					"Cannot create array type from class " + type.getCanonicalName());
+					"Cannot create array type from class " + type.getCanonicalName(), e);
 		}
 	}
 

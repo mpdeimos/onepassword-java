@@ -1,8 +1,7 @@
-package one.password.cli;
+package one.password.util;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import one.password.util.Utils;
 
 public class UtilsTest {
 	@Test
