@@ -2,10 +2,20 @@ package one.password.cli;
 
 /** 1password CLI commands */
 public enum Commands {
-	SIGNIN, SIGNOUT, LIST, CREATE, DELETE;
+	VERSION("--version"), SIGNIN, SIGNOUT, GET, LIST, CREATE, EDIT, DELETE;
+
+	private String name;
+
+	private Commands() {
+		this.name = name().toLowerCase();
+	}
+
+	private Commands(String name) {
+		this.name = name;
+	}
 
 	@Override
 	public String toString() {
-		return this.name().toLowerCase();
+		return name;
 	}
 }

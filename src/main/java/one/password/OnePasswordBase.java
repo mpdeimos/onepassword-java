@@ -20,14 +20,17 @@ public abstract class OnePasswordBase {
 		this.session = session;
 	}
 
+	/** Lists all users. */
 	public User[] listUsers() throws IOException {
 		return list(User.class);
 	}
 
+	/** Lists all groups. */
 	public Group[] listGroups() throws IOException {
 		return list(Group.class);
 	}
 
+	/** Lists all vaults. */
 	public Vault[] listVaults() throws IOException {
 		return list(Vault.class);
 	}
@@ -37,17 +40,32 @@ public abstract class OnePasswordBase {
 		return Json.deserialize(json, Utils.arrayType(entity));
 	}
 
+	/** Creates a new vault with name. */
 	public Vault createVault(String name) throws IOException {
 		String json = execute(() -> op.create(session, Vault.class, name));
 		return Json.deserialize(json, Vault.class);
 	}
 
+	/** Creates a new vault with name and description. */
 	public Vault createVault(String name, String description) throws IOException {
 		String json = execute(
 				() -> op.create(session, Vault.class, name, Flags.DESCRIPTION.is(description)));
 		return Json.deserialize(json, Vault.class);
 	}
 
+	/** Returns the vault with the given name or uuid. Fails if the name is not unique. */
+	public Vault getVault(String nameOrUuid) throws IOException {
+		String json = execute(() -> op.get(session, Vault.class, nameOrUuid));
+		return Json.deserialize(json, Vault.class);
+	}
+
+	/** Saves modification to the given vault. */
+	public void editVault(Vault vault) throws IOException {
+		execute(() -> op.edit(session, Vault.class, vault.getUuid(),
+				Flags.NAME.is(vault.getName())));
+	}
+
+	/** Deletes the vault. */
 	public void deleteVault(Vault vault) throws IOException {
 		execute(() -> op.delete(session, Vault.class, vault.getUuid()));
 	}

@@ -46,37 +46,56 @@ public class Op {
 
 	/** Signs out the current session. */
 	public void signout(Session session) throws IOException {
-		execute(session, Commands.SIGNOUT.toString());
+		execute(session, Commands.SIGNOUT);
 	}
 
 	/** Lists all items of a given entity type. */
 	public <T extends Entity> String list(Session session, Class<T> entity) throws IOException {
-		return execute(session, Commands.LIST.toString(), Entity.plural(entity));
+		return execute(session, Commands.LIST, Entity.plural(entity));
+	}
+
+	/** Gets an item of a given entity type specified by name or uuid. */
+	public String get(Session session, Class<? extends Entity> entity, String nameOrUuid,
+			String... arguments) throws IOException {
+		return execute(session, Commands.GET,
+				Utils.asArray(Entity.singular(entity), nameOrUuid, arguments));
 	}
 
 	/** Creates an item of a given entity type. */
 	public String create(Session session, Class<? extends Entity> entity, String name,
 			String... arguments) throws IOException {
-		return execute(session, Utils.asArray(Commands.CREATE.toString(), Entity.singular(entity),
-				name, arguments));
+		return execute(session, Commands.CREATE,
+				Utils.asArray(Entity.singular(entity), name, arguments));
+	}
+
+	/** Edits an item of a given entity type. */
+	public String edit(Session session, Class<? extends Entity> entity, String uuid,
+			String... arguments) throws IOException {
+		return execute(session, Commands.EDIT,
+				Utils.asArray(Entity.singular(entity), uuid, arguments));
 	}
 
 	/** Deletes an item of a given entity type. */
 	public String delete(Session session, Class<? extends Entity> entity, String uuid)
 			throws IOException {
-		return execute(session, Commands.DELETE.toString(), Entity.singular(entity), uuid);
+		return execute(session, Commands.DELETE, Entity.singular(entity), uuid);
 	}
 
 	/** Prints the version number of the installed 1password CLI. */
 	public String version() throws IOException {
-		return execute(null, Flags.VERSION.toString());
+		return execute(null, Commands.VERSION);
 	}
 
 	/**
-	 * Executes an arbitrary 1password CLI command. Arguments are converted to strings using
-	 * {@link #toString()}. The session may be null in order to use a not use authentication or
-	 * manually handle it via {@link Flags#SESSION}.
+	 * Executes an arbitrary 1password CLI command. The session may be null in order to use a not
+	 * use authentication or manually handle it via {@link Flags#SESSION}.
 	 */
+	public String execute(Session session, Commands command, String... arguments)
+			throws IOException {
+		return execute(session, Utils.asArray(command.toString(), arguments));
+	}
+
+	/** @see #execute(Session, Commands, String...) */
 	public String execute(Session session, String... arguments) throws IOException {
 		return OpProcess.start(config, session, arguments).output();
 	}
