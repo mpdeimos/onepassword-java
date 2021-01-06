@@ -35,3 +35,11 @@ jobs:
         OP_TEST_SECRETKEY: ${{ secrets.OP_TEST_SECRETKEY }}
         OP_TEST_PASSWORD: ${{ secrets.OP_TEST_PASSWORD }}
         OP_TEST_DEVICE: ${{ secrets.OP_TEST_DEVICE }}
+
+    - name: Teamscale Upload
+      if: ${{ always() && runner.os == 'Linux' }}
+      env:
+        TEAMSCALE_ACCESS_KEY: ${{ secrets.TEAMSCALE_ACCESS_KEY }}
+      run: |
+        chmod +x ./build/bin/teamscale-upload
+        ./build/bin/teamscale-upload --server https://teamscale.io --project GitHub-mpdeimos-onepassword-java --user mpdeimos --accesskey $TEAMSCALE_ACCESS_KEY --partition "test" --input teamscale-upload.config

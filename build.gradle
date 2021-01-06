@@ -1,5 +1,6 @@
 plugins {
 	id 'java-library'
+	id 'jacoco'
 	id "de.undercouch.download" version "4.1.1"
 	id 'com.adarshr.test-logger' version '2.1.1'
 }
@@ -30,23 +31,34 @@ tasks.withType(Test) {
 		showPassedStandardStreams false
 		slowThreshold 5000
 	}
+	finalizedBy jacocoTestReport
 }
 
+jacocoTestReport {
+	reports {
+		xml.enabled true
+	}
+}
 
-task downloadOnePassword {
+task downloadBinaries {
 	doLast {
 		def onePasswordVersion = file("${sourceSets.test.resources.srcDirs.first()}/op.version").text
+		def teamscaleUploadVersion = "2.0.0"
 		def buildBinDir = file("$buildDir/bin")
+		def os = "linux"
+		if (System.properties['os.name'].toLowerCase().contains('windows')) {
+			os = "windows"
+		}
 		download {
 			src ([
-				"https://cache.agilebits.com/dist/1P/op/pkg/v${onePasswordVersion}/op_linux_amd64_v${onePasswordVersion}.zip",
-				"https://cache.agilebits.com/dist/1P/op/pkg/v${onePasswordVersion}/op_windows_amd64_v${onePasswordVersion}.zip"
+				"https://cache.agilebits.com/dist/1P/op/pkg/v${onePasswordVersion}/op_${os}_amd64_v${onePasswordVersion}.zip",
+				"https://github.com/cqse/teamscale-upload/releases/download/v${teamscaleUploadVersion}/teamscale-upload-${os}.zip",
 			])
 			dest buildBinDir
 			overwrite false
 		}
 
-		fileTree(dir: buildBinDir).include("op_*_v${onePasswordVersion}.zip").each { zip ->
+		fileTree(dir: buildBinDir).include("op_${os}_amd64_v${onePasswordVersion}.zip").include("teamscale-upload-${os}.zip").each { zip ->
 			copy {
 				from zipTree(zip)
 				into buildBinDir
@@ -55,5 +67,5 @@ task downloadOnePassword {
 	}
 }
 
-task bootstrap(dependsOn: ["downloadOnePassword"])
-processTestResources.dependsOn += ["downloadOnePassword"]
+task bootstrap(dependsOn: ["downloadBinaries"])
+processTestResources.dependsOn += ["downloadBinaries"]
