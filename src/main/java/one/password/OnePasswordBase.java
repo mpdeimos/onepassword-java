@@ -20,51 +20,16 @@ public abstract class OnePasswordBase {
 		this.session = session;
 	}
 
-	/** Returns the group with the given name or uuid. Fails if the name is not unique. */
-	public Group getGroup(String nameOrUuid) throws IOException {
-		return get(Group.class, nameOrUuid);
-	}
-
-	/** Returns the vault with the given name or uuid. Fails if the name is not unique. */
-	public Vault getVault(String nameOrUuid) throws IOException {
-		return get(Vault.class, nameOrUuid);
-	}
-
-	private <T extends Entity> T get(Class<T> entity, String nameOrUuid) throws IOException {
-		String json = execute(() -> op.get(session, entity, nameOrUuid));
-		return Json.deserialize(json, entity);
-	}
-
-	/** Saves modification to the given vault. */
-	public void editVault(Vault vault) throws IOException {
-		execute(() -> op.edit(session, Vault.class, vault.getUuid(),
-				Flags.NAME.is(vault.getName())));
-	}
-
-	/** Deletes a group. */
-	public void deleteGroup(Group group) throws IOException {
-		delete(group);
-	}
-
-	/** Deletes a vault. */
-	public void deleteVault(Vault vault) throws IOException {
-		delete(vault);
-	}
-
-	public void delete(Entity entity) throws IOException {
-		execute(() -> op.delete(session, entity.getClass(), entity.getUuid()));
-	}
-
 	public EntityCommand<User> users() {
 		return new EntityCommand<>(User.class);
 	}
 
-	public EntityCommand<Group> groups() {
-		return new EntityCommand<>(Group.class);
+	public NamedEntityCommand<Group> groups() {
+		return new NamedEntityCommand<>(Group.class);
 	}
 
-	public EntityCommand<Vault> vaults() {
-		return new EntityCommand<>(Vault.class);
+	public NamedEntityCommand<Vault> vaults() {
+		return new NamedEntityCommand<>(Vault.class);
 	}
 
 	public Op op() {
@@ -81,10 +46,34 @@ public abstract class OnePasswordBase {
 
 	/** Commands for manipulating an entity. */
 	public class EntityCommand<T extends Entity> {
-		private Class<T> entity;
+		protected final Class<T> type;
 
 		EntityCommand(Class<T> entity) {
-			this.entity = entity;
+			this.type = entity;
+		}
+
+		/** Returns an entity with the given uuid or other primary key. Fails if not unique. */
+		public T get(String nameOrUuid) throws IOException {
+			String json = execute(() -> op.get(session, type, nameOrUuid));
+			return Json.deserialize(json, type);
+		}
+
+		/** Lists all entities */
+		public T[] list() throws IOException {
+			String json = execute(() -> op.list(session, type));
+			return Json.deserialize(json, Utils.arrayType(type));
+		}
+
+		/** Deletes an entity. */
+		public void delete(Entity entity) throws IOException {
+			execute(() -> op.delete(session, type, entity.getUuid()));
+		}
+	}
+
+	/** Commands for manipulating an entity that is identified by name. */
+	public class NamedEntityCommand<T extends Entity.Named> extends EntityCommand<T> {
+		NamedEntityCommand(Class<T> type) {
+			super(type);
 		}
 
 		/** Creates an entity. */
@@ -95,15 +84,14 @@ public abstract class OnePasswordBase {
 		/** Creates an entity. */
 		public T create(String name, String description) throws IOException {
 			String json = execute(
-					() -> op.create(session, entity, name, Flags.DESCRIPTION.is(description)));
-			return Json.deserialize(json, entity);
+					() -> op.create(session, type, name, Flags.DESCRIPTION.is(description)));
+			return Json.deserialize(json, type);
 		}
 
-		/** Lists all entities */
-		private T[] list() throws IOException {
-			String json = execute(() -> op.list(session, entity));
-			return Json.deserialize(json, Utils.arrayType(entity));
+		/** Saves modification to the given entity. */
+		public void edit(T entity) throws IOException {
+			execute(() -> op.edit(session, type, entity.getUuid(),
+					Flags.NAME.is(entity.getName())));
 		}
-
 	}
 }

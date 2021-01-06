@@ -33,9 +33,9 @@ public class TestInjector implements ParameterResolver {
 					config.credentials.getSecretKey(), config.credentials::getPassword));
 		})),
 
-		OP(Op.class, Suppliers.memoize(() -> create(OnePassword.class).getOp())),
+		OP(Op.class, Suppliers.memoize(() -> create(OnePassword.class).op())),
 
-		SESSION(Session.class, Suppliers.memoize(() -> create(OnePassword.class).getSession()));
+		SESSION(Session.class, Suppliers.memoize(() -> create(OnePassword.class).session()));
 
 		private final Class<?> clazz;
 		private final Supplier<?> constructor;
