@@ -23,8 +23,22 @@ dependencies {
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
-tasks.named('test') {
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+tasks.withType(Test) { testTask ->
 	useJUnitPlatform()
+
+	testTask.testLogging { logging ->
+		events TestLogEvent.FAILED,
+				TestLogEvent.SKIPPED,
+				TestLogEvent.STANDARD_OUT,
+				TestLogEvent.STANDARD_ERROR
+
+		exceptionFormat TestExceptionFormat.FULL
+		showExceptions true
+		showCauses true
+		showStackTraces true
+	}
 }
 
 task downloadOnePassword {
