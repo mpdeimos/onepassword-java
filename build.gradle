@@ -1,6 +1,7 @@
 plugins {
 	id 'java-library'
 	id "de.undercouch.download" version "4.1.1"
+	id 'com.adarshr.test-logger' version '2.1.1'
 }
 
 java {
@@ -23,23 +24,14 @@ dependencies {
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import org.gradle.api.tasks.testing.logging.TestLogEvent
-tasks.withType(Test) { testTask ->
+tasks.withType(Test) {
 	useJUnitPlatform()
-
-	testTask.testLogging { logging ->
-		events TestLogEvent.FAILED,
-				TestLogEvent.SKIPPED,
-				TestLogEvent.STANDARD_OUT,
-				TestLogEvent.STANDARD_ERROR
-
-		exceptionFormat TestExceptionFormat.FULL
-		showExceptions true
-		showCauses true
-		showStackTraces true
+	testlogger {
+		showPassedStandardStreams false
+		slowThreshold 5000
 	}
 }
+
 
 task downloadOnePassword {
 	doLast {
