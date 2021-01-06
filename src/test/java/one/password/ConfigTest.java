@@ -11,6 +11,8 @@ public class ConfigTest {
 		Assertions.assertThat(config.getDevice()).hasSize(26);
 		Assertions.assertThatIllegalArgumentException().isThrownBy(() -> config.setDevice(""));
 		Assertions.assertThatIllegalArgumentException().isThrownBy(() -> config.setDevice("a"));
+		Assertions.assertThatIllegalArgumentException()
+				.isThrownBy(() -> config.setDevice(Strings.repeat("1", 26)));
 		Assertions.assertThatCode(() -> config.setDevice(Strings.repeat("a", 26)))
 				.doesNotThrowAnyException();
 		Assertions.assertThat(config.getDevice()).isEqualTo(Strings.repeat("a", 26));

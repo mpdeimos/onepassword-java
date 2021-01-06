@@ -17,7 +17,7 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 	/** Signs in 1password, creating a new session. */
 	public OnePassword(String signInAddress, String emailAddress, String secretKey,
 			Supplier<String> password) throws IOException {
-		this((Config) null, signInAddress, emailAddress, secretKey, password);
+		this(new Config(), signInAddress, emailAddress, secretKey, password);
 	}
 
 	/** Signs in 1password, creating a new session. */
@@ -33,6 +33,10 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 		this.emailAddress = emailAddress;
 		this.secretKey = secretKey;
 		this.password = password;
+		signinOnInit();
+	}
+
+	protected void signinOnInit() throws IOException {
 		signin();
 	}
 
@@ -67,13 +71,13 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 	 * High-level 1password CLI Java binding that reuses an existing session, but does not
 	 * auto-renew it.
 	 */
-	public class PreAuthenticated extends OnePasswordBase {
+	public static class PreAuthenticated extends OnePasswordBase {
 		public PreAuthenticated(OnePasswordBase api) {
 			super(api.op, api.session);
 		}
 
 		public PreAuthenticated(Session session) {
-			this(null, session);
+			this(new Config(), session);
 		}
 
 		public PreAuthenticated(Config config, Session session) {

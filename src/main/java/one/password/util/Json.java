@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.JsonParseException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -36,7 +36,7 @@ public class Json {
 	public static <T> T deserialize(String json, Class<T> clazz) throws IOException {
 		try {
 			return GSON.fromJson(json, clazz);
-		} catch (JsonSyntaxException e) {
+		} catch (JsonParseException e) {
 			throw new IOException(e.getMessage() + "\nJson:\n" + json, e);
 		}
 	}

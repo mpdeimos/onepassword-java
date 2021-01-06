@@ -67,20 +67,16 @@ public final class Utils {
 		}
 	}
 
-	public static String[] asArray(String a, String... more) {
+	public static String[] asArray(String a, String[] more) {
 		return combineSwitched(more, a);
 	}
 
-	public static String[] asArray(String a, String b, String... more) {
-		return combineSwitched(more, combine(a, b));
+	public static String[] asArray(String a, String b, String[] more) {
+		return combineSwitched(more, a, b);
 	}
 
-	public static String[] asArray(String a, String b, String c, String... more) {
-		return combineSwitched(more, combine(a, b, c));
-	}
-
-	private static String[] combine(String... more) {
-		return more;
+	public static String[] asArray(String a, String b, String c, String[] more) {
+		return combineSwitched(more, a, b, c);
 	}
 
 	private static String[] combineSwitched(String[] after, String... before) {

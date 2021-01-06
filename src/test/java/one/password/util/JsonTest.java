@@ -14,4 +14,9 @@ public class JsonTest {
 		Assertions.assertThat(Json.serialize(date)).isEqualTo(dateJson);
 	}
 
+	@Test
+	void testInvalidJsonThrowsIoException() throws IOException {
+		Assertions.assertThatIOException().isThrownBy(() -> Json.deserialize("{", String.class));
+	}
+
 }

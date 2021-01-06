@@ -14,4 +14,21 @@ public class UtilsTest {
 				.isEqualTo("foo_bar1");
 		Assertions.assertThat(Utils.getShorthand("no.url")).isEmpty();
 	}
+
+	@Test
+	void testArrayType() {
+		Assertions.assertThat(Utils.arrayType(String.class)).isEqualTo(String[].class);
+		Assertions.assertThatThrownBy(() -> Utils.arrayType(String[].class))
+				.isInstanceOf(AssertionError.class);
+	}
+
+	@Test
+	void testAsArray() {
+		Assertions.assertThat(Utils.asArray("a", new String[] {"b", "c", "d", "e"}))
+				.containsExactly("a", "b", "c", "d", "e");
+		Assertions.assertThat(Utils.asArray("a", "b", new String[] {"c", "d", "e"}))
+				.containsExactly("a", "b", "c", "d", "e");
+		Assertions.assertThat(Utils.asArray("a", "b", "c", new String[] {"d", "e"}))
+				.containsExactly("a", "b", "c", "d", "e");
+	}
 }

@@ -16,6 +16,7 @@ class OnePasswordTest {
 
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
+
 		try (OnePassword op = new OnePassword(config, config.credentials.getSignInAddress(),
 				config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
 				config.credentials::getPassword)) {
@@ -25,6 +26,20 @@ class OnePasswordTest {
 			Assertions.assertThat(initialSession.getSession())
 					.isNotEqualTo(op.session.getSession());
 		}
+	}
+
+	@Test
+	void withoutConfig(TestCredentials credentials) throws IOException {
+		OnePassword op =
+				new OnePassword(credentials.getSignInAddress(), credentials.getEmailAddress(),
+						credentials.getSecretKey(), credentials::getPassword) {
+					@Override
+					protected void signinOnInit() throws IOException {
+						// This would fail too early as we usually sign in during construct
+					}
+				};
+		Assertions.assertThatIOException().isThrownBy(() -> op.users().list())
+				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
 	}
 
 	@Test

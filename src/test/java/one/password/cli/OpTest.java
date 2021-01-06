@@ -14,6 +14,7 @@ import one.password.Group;
 import one.password.Session;
 import one.password.User;
 import one.password.Vault;
+import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
 
@@ -21,6 +22,12 @@ public class OpTest {
 	@Test
 	void testGetVersion(Op op) throws IOException {
 		Assertions.assertThat(op.version()).isEqualTo(TestUtils.getOnePasswordVersion());
+	}
+
+	@Test
+	void testGetVersionWithoutConfig() throws IOException {
+		Assertions.assertThatIOException().isThrownBy(() -> new Op().version())
+				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
 	}
 
 	@Test
@@ -37,6 +44,17 @@ public class OpTest {
 		Assertions.assertThat(session.getShorthand())
 				.isEqualTo(URI.create(credentials.getSignInAddress()).getHost().split("\\.")[0]
 						.replace("-", "_"));
+	}
+
+
+	@Test
+	void testSigninWithShorthand(TestConfig config) throws IOException {
+		config.setShorthand("myshorthand");
+		Op op = new Op(config);
+		Session session = op.signin(config.credentials.getSignInAddress(),
+				config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
+				config.credentials::getPassword);
+		Assertions.assertThat(session.getShorthand()).isEqualTo("myshorthand");
 	}
 
 	@Test
