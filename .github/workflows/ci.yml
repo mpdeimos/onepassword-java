@@ -38,9 +38,8 @@ jobs:
         OP_TEST_DEVICE: ${{ secrets.OP_TEST_DEVICE }}
 
     - name: Teamscale Upload
-      if: ${{ always() && runner.os == 'Linux' }}
+      if: ${{ always() }}
       env:
-        TEAMSCALE_ACCESS_KEY: ${{ secrets.TEAMSCALE_ACCESS_KEY }}
+        PATH: ${{ github.workspace }}/build/bin
       run: |
-        chmod +x ./build/bin/teamscale-upload
-        ./build/bin/teamscale-upload --server https://teamscale.io --project GitHub-mpdeimos-onepassword-java --user mpdeimos --accesskey $TEAMSCALE_ACCESS_KEY --partition "test" --input teamscale-upload.config
+        teamscale-upload --server https://teamscale.io --project GitHub-mpdeimos-onepassword-java --user mpdeimos --accesskey ${{ secrets.TEAMSCALE_ACCESS_KEY }} --partition "Test ${{ runner.os }}" --input teamscale-upload.config

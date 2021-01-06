@@ -64,6 +64,12 @@ task downloadBinaries {
 				into buildBinDir
 			}
 		}
+
+		if (os == 'linux') {
+			project.exec {
+				commandLine('chmod',  '+x', "$buildBinDir/teamscale-upload")
+			}
+		}
 	}
 }
 
