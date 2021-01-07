@@ -1,18 +1,22 @@
 package one.password;
 
 import java.io.IOException;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
+import one.password.OnePasswordBase.UserEntityCommand;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
+import one.password.util.Utils;
 
 class OnePasswordTest {
-	private static final String TEST_ITEM_PREFIX = "__test__";
 
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
@@ -42,29 +46,113 @@ class OnePasswordTest {
 				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
 	}
 
-	@Test
-	void testListUsers(OnePassword op, TestCredentials credentials) throws IOException {
-		Assertions.assertThat(op.users().list())
-				.anyMatch(user -> user.getEmail().equals(credentials.getEmailAddress()));
-	}
+	@Nested
+	class Users extends EntityCommandTest<User, UserEntityCommand> {
+		private final String emailTemplatePrefix;
+		private final String emailTemplateSuffix;
 
+		protected Users(OnePassword op) {
+			super(User.class, op.users());
+			Properties environment =
+					TestUtils.assertNoIOException(() -> TestUtils.getTestEnvironment());
+			emailTemplatePrefix = environment.getProperty("OP_TEST_EMAILADDRESS_TEMPLATE_PREFIX");
+			emailTemplateSuffix = environment.getProperty("OP_TEST_EMAILADDRESS_TEMPLATE_SUFFIX");
+			Assertions.assertThat(emailTemplatePrefix).isNotEmpty();
+			Assertions.assertThat(emailTemplateSuffix).isNotEmpty();
+		}
 
-	@Test
-	void testListGroups(OnePassword op) throws IOException {
-		Assertions.assertThat(op.groups().list()).extracting(Group::getName).contains("Recovery",
-				"Administrators", "Owners", "Administrators");
-	}
+		@Override
+		protected User createTestEntity(String name) throws IOException {
+			String emailAddress = secondaryIdentifier(name);
+			return command.create(emailAddress, name);
+		}
 
-	@Test
-	void testListVaults(OnePassword op) throws IOException {
-		Assertions.assertThat(op.vaults().list()).extracting(Vault::getName).contains("Private",
-				"Shared");
+		@Override
+		protected String secondaryIdentifier(String name) {
+			return emailTemplatePrefix + name.replaceAll("[\\W]|_", "_") + emailTemplateSuffix;
+		}
+
+		@Override
+		protected String getSecondaryIdentifier(User entity) {
+			return entity.getEmail();
+		}
+
+		@Override
+		protected boolean isTestEntity(User entity) {
+			return entity.getEmail().startsWith(emailTemplatePrefix)
+					&& entity.getEmail().endsWith(emailTemplateSuffix);
+		}
+
+		@Test
+		void listExisting(OnePassword op, TestCredentials credentials) throws IOException {
+			Assertions.assertThat(op.users().list())
+					.anyMatch(user -> user.getEmail().equals(credentials.getEmailAddress()));
+		}
+
+		@Test
+		void createUserWithAdditionalFields() throws IOException {
+			User user = command.create(secondaryIdentifier("email"), "user name");
+			Assertions.assertThat(user.getEmail()).isEqualTo(secondaryIdentifier("email"));
+			Assertions.assertThat(user.getName()).isEqualTo("user name");
+			Assertions.assertThat(user.getFirstName()).isEqualTo("user name");
+			Assertions.assertThat(user.getLastName()).isEmpty();
+			Assertions.assertThat(user.getLanguage()).isEqualTo("en");
+			Assertions.assertThat(user.getCreatedAt()).isBeforeOrEqualTo(ZonedDateTime.now())
+					.isEqualTo(user.getUpdatedAt());
+			Assertions.assertThat(user.getLastAuthAt()).isBefore(user.getCreatedAt());
+			command.delete(user);
+
+			user = command.create(secondaryIdentifier("email2"), "user name", "de");
+			Assertions.assertThat(user.getLanguage()).isEqualTo("de");
+		}
+
+		@Test
+		void editName() throws IOException {
+			User user = command.create(secondaryIdentifier("email"), "user name");
+			user.setName("new name");
+			command.edit(user);
+			User editedUser = command.get(user.getUuid());
+			Assertions.assertThat(editedUser.getName()).isEqualTo("new name");
+			Assertions.assertThat(editedUser.getFirstName()).isEqualTo("new name");
+			Assertions.assertThat(editedUser.getLastName()).isEmpty();
+			command.delete(editedUser);
+			Assertions.assertThatIOException().isThrownBy(() -> command.edit(editedUser));
+		}
+
+		@Test
+		void cannotCreateUserWithSameMailTwice() throws IOException {
+			User user = createTestEntity("twice");
+			Assertions.assertThatIOException().isThrownBy(() -> createTestEntity("twice"));
+			command.delete(user);
+		}
 	}
 
 	@Nested
 	class Groups extends NamedEntityCommandTest<Group> {
 		protected Groups(OnePassword op) {
 			super(Group.class, op.groups());
+		}
+
+		@Test
+		void listExisting(OnePassword op) throws IOException {
+			Assertions.assertThat(op.groups().list()).extracting(Group::getName)
+					.contains("Recovery", "Administrators", "Owners", "Administrators");
+		}
+
+		@Test
+		void createdAt() throws IOException {
+			Assertions.assertThat(createTestEntity().getCreatedAt())
+					.isBeforeOrEqualTo(ZonedDateTime.now());
+		}
+
+		@Test
+		void setDescription() throws IOException {
+			Group group = command.create(secondaryIdentifier("group"), "description");
+			Assertions.assertThat(group.getDescription()).isEqualTo("description");
+			group.setDescription("new description");
+			command.edit(group);
+			Assertions.assertThat(command.get(group.getUuid()).getDescription())
+					.isEqualTo("new description");
 		}
 	}
 
@@ -73,13 +161,19 @@ class OnePasswordTest {
 		protected Vaults(OnePassword op) {
 			super(Vault.class, op.vaults());
 		}
+
+		@Test
+		void listExisting(OnePassword op) throws IOException {
+			Assertions.assertThat(op.vaults().list()).extracting(Vault::getName).contains("Private",
+					"Shared");
+		}
 	}
 
-	abstract static class NamedEntityCommandTest<T extends Entity.Named> {
-		private final Class<T> type;
-		private NamedEntityCommand<T> command;
+	abstract static class EntityCommandTest<E extends Entity, C extends EntityCommand<E>> {
+		protected final Class<E> type;
+		protected final C command;
 
-		protected NamedEntityCommandTest(Class<T> type, NamedEntityCommand<T> command) {
+		protected EntityCommandTest(Class<E> type, C command) {
 			this.type = type;
 			this.command = command;
 		}
@@ -87,68 +181,106 @@ class OnePasswordTest {
 		@BeforeEach
 		void cleanup() {
 			Arrays.stream(TestUtils.assertNoIOException(() -> command.list()))
-					.filter(entity -> entity.getName().startsWith(TEST_ITEM_PREFIX))
+					.filter(this::isTestEntity)
 					.forEach(entity -> TestUtils.assertNoIOException(() -> {
 						command.delete(entity);
 						return null;
 					}));
 		}
 
-		protected String entityName() {
-			return withTestPrefix(type.getSimpleName());
+		protected abstract boolean isTestEntity(E entity);
+
+		protected E createTestEntity() throws IOException {
+			return createTestEntity(Utils.randomBase32(8));
 		}
+
+		protected abstract E createTestEntity(String name) throws IOException;
+
+		protected abstract String secondaryIdentifier(String name);
+
+		protected abstract String getSecondaryIdentifier(E entity);
 
 		@Test
 		void createListGetDelete() throws IOException {
-			T entity = command.create(entityName());
-			Assertions.assertThat(entity.getName()).isEqualTo(entityName());
-			Assertions.assertThat(entity.getDescription()).isEmpty();
+			E entity = createTestEntity();
 
 			Assertions.assertThat(command.list())
-					.anyMatch(v -> v.getUuid().equals(entity.getUuid()));
+					.anyMatch(e -> e.getUuid().equals(entity.getUuid()));
+			Assertions.assertThat(command.list()).extracting(this::getSecondaryIdentifier)
+					.anyMatch(secondaryId -> secondaryId.equals(getSecondaryIdentifier(entity)));
 
-			Assertions.assertThat(command.get(entity.getName()))
-					.matches(v -> v.getUuid().equals(entity.getUuid()));
 			Assertions.assertThat(command.get(entity.getUuid()))
-					.matches(v -> v.getUuid().equals(entity.getUuid()));
+					.matches(e -> e.getUuid().equals(entity.getUuid()));
+			Assertions.assertThat(command.get(getSecondaryIdentifier(entity)))
+					.matches(e -> e.getUuid().equals(entity.getUuid()));
 
 			command.delete(entity);
 			Assertions.assertThat(command.list())
-					.noneMatch(v -> v.getUuid().equals(entity.getUuid()));
+					.noneMatch(e -> e.getUuid().equals(entity.getUuid()));
 
 			Assertions.assertThatIOException().isThrownBy(() -> command.delete(entity));
 		}
+	}
+
+	abstract static class NamedEntityCommandTest<E extends Entity.Named>
+			extends EntityCommandTest<E, NamedEntityCommand<E>> {
+		private static final String TEST_ITEM_PREFIX = "__test__";
+
+		protected NamedEntityCommandTest(Class<E> type, NamedEntityCommand<E> command) {
+			super(type, command);
+		}
+
+		@Override
+		protected boolean isTestEntity(E entity) {
+			return entity.getName().startsWith(TEST_ITEM_PREFIX);
+		}
+
+		@Override
+		protected E createTestEntity(String name) throws IOException {
+			return command.create(secondaryIdentifier(name));
+		}
+
+		@Override
+		protected String secondaryIdentifier(String name) {
+			return TEST_ITEM_PREFIX + name;
+		}
+
+		@Override
+		protected String getSecondaryIdentifier(E entity) {
+			return entity.getName();
+		}
 
 		@Test
-		void withDescription() throws IOException {
-			T entity = command.create(entityName(), "some description");
-			Assertions.assertThat(entity.getName()).isEqualTo(entityName());
+		void nameAndDescription() throws IOException {
+			E entity = command.create(secondaryIdentifier("name"));
+			Assertions.assertThat(entity.getName()).isEqualTo(secondaryIdentifier("name"));
+			Assertions.assertThat(entity.getDescription()).isEmpty();
+			command.delete(entity);
+
+			entity = command.create(secondaryIdentifier("name"), "some description");
+			Assertions.assertThat(entity.getName()).isEqualTo(secondaryIdentifier("name"));
 			Assertions.assertThat(entity.getDescription()).isEqualTo("some description");
 			command.delete(entity);
 		}
 
 		@Test
 		void edit() throws IOException {
-			T entity = command.create(entityName());
-			entity.setName(entityName() + " edited");
+			E entity = createTestEntity("name");
+			entity.setName(secondaryIdentifier("edited"));
 			command.edit(entity);
 			Assertions.assertThat(command.get(entity.getUuid()).getName())
-					.isEqualTo(entityName() + " edited");
+					.isEqualTo(secondaryIdentifier("edited"));
 			command.delete(entity);
 			Assertions.assertThatIOException().isThrownBy(() -> command.edit(entity));
 		}
 
 		@Test
 		void getByNameFailsWithIdenticalName() throws IOException {
-			T entity = command.create(entityName());
-			T entity2 = command.create(entityName());
+			E entity = createTestEntity("name");
+			E entity2 = createTestEntity("name");
 			Assertions.assertThatIOException().isThrownBy(() -> command.get(entity.getName()));
 			command.delete(entity);
 			command.delete(entity2);
 		}
-	}
-
-	private static String withTestPrefix(String name) {
-		return TEST_ITEM_PREFIX + name;
 	}
 }

@@ -1,6 +1,17 @@
 package one.password;
 
+import java.time.ZonedDateTime;
+import java.util.stream.Stream;
+import one.password.cli.Flags;
+
 public class User extends Entity {
+
+	private String email;
+
+	public String getEmail() {
+		return email;
+	}
+
 	private String name;
 
 	public String getName() {
@@ -11,9 +22,44 @@ public class User extends Entity {
 		this.name = name;
 	}
 
-	private String email;
+	private String firstName;
 
-	public String getEmail() {
-		return email;
+	public String getFirstName() {
+		return firstName;
+	}
+
+	private String lastName;
+
+	public String getLastName() {
+		return lastName;
+	}
+
+	private String language;
+
+	public String getLanguage() {
+		return language;
+	}
+
+	private ZonedDateTime createdAt;
+
+	public ZonedDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	private ZonedDateTime updatedAt;
+
+	public ZonedDateTime getUpdatedAt() {
+		return updatedAt;
+	}
+
+	private ZonedDateTime lastAuthAt;
+
+	public ZonedDateTime getLastAuthAt() {
+		return lastAuthAt;
+	}
+
+	@Override
+	Stream<String> saveArguments() {
+		return Stream.concat(super.saveArguments(), Stream.of(Flags.NAME.is(name)));
 	}
 }

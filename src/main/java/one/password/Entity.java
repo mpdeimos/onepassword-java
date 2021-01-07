@@ -1,6 +1,8 @@
 package one.password;
 
+import java.util.stream.Stream;
 import com.google.gson.annotations.SerializedName;
+import one.password.cli.Flags;
 
 /** Base class for 1password entities. */
 public abstract class Entity {
@@ -8,6 +10,11 @@ public abstract class Entity {
 
 	public String getUuid() {
 		return uuid;
+	}
+
+	/** Arguments for saving this entity via the 1password CLI. */
+	Stream<String> saveArguments() {
+		return Stream.empty();
 	}
 
 	/** Returns the singular name of the entity class. */
@@ -33,10 +40,15 @@ public abstract class Entity {
 		}
 
 		@SerializedName("desc")
-		private String description;
+		protected String description;
 
 		public String getDescription() {
 			return description;
+		}
+
+		@Override
+		Stream<String> saveArguments() {
+			return Stream.concat(super.saveArguments(), Stream.of(Flags.NAME.is(name)));
 		}
 	}
 }

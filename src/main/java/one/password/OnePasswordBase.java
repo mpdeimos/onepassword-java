@@ -20,14 +20,15 @@ public abstract class OnePasswordBase {
 		this.session = session;
 	}
 
-	public EntityCommand<User> users() {
-		return new EntityCommand<>(User.class);
+	public UserEntityCommand users() {
+		return new UserEntityCommand();
 	}
 
 	public NamedEntityCommand<Group> groups() {
 		return new NamedEntityCommand<>(Group.class);
 	}
 
+	// TODO create --allow-admins-to-manage
 	public NamedEntityCommand<Vault> vaults() {
 		return new NamedEntityCommand<>(Vault.class);
 	}
@@ -64,6 +65,12 @@ public abstract class OnePasswordBase {
 			return Json.deserialize(json, Utils.arrayType(type));
 		}
 
+		/** Saves modification to the given entity. */
+		public void edit(T entity) throws IOException {
+			execute(() -> op.edit(session, type, entity.getUuid(),
+					entity.saveArguments().toArray(String[]::new)));
+		}
+
 		/** Deletes an entity. */
 		public void delete(Entity entity) throws IOException {
 			execute(() -> op.delete(session, type, entity.getUuid()));
@@ -87,11 +94,24 @@ public abstract class OnePasswordBase {
 					() -> op.create(session, type, name, Flags.DESCRIPTION.is(description)));
 			return Json.deserialize(json, type);
 		}
+	}
 
-		/** Saves modification to the given entity. */
-		public void edit(T entity) throws IOException {
-			execute(() -> op.edit(session, type, entity.getUuid(),
-					Flags.NAME.is(entity.getName())));
+	/** Commands for manipulating an user. */
+	public class UserEntityCommand extends EntityCommand<User> {
+		UserEntityCommand() {
+			super(User.class);
+		}
+
+		/** Creates an user. */
+		public User create(String emailAddress, String name) throws IOException {
+			return create(emailAddress, name, null);
+		}
+
+		/** Creates an user and specifies its language, e.g. "en" or "de". */
+		public User create(String emailAddress, String name, String language) throws IOException {
+			String json = execute(() -> op.create(session, type, emailAddress, name,
+					Flags.LANGUAGE.is(language)));
+			return Json.deserialize(json, type);
 		}
 	}
 }

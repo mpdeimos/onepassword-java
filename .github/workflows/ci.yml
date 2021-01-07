@@ -36,6 +36,8 @@ jobs:
         OP_TEST_SECRETKEY: ${{ secrets.OP_TEST_SECRETKEY }}
         OP_TEST_PASSWORD: ${{ secrets.OP_TEST_PASSWORD }}
         OP_TEST_DEVICE: ${{ secrets.OP_TEST_DEVICE }}
+        OP_TEST_EMAILADDRESS_TEMPLATE_PREFIX: ${{ secrets.OP_TEST_EMAILADDRESS_TEMPLATE_PREFIX }}
+        OP_TEST_EMAILADDRESS_TEMPLATE_SUFFIX: ${{ secrets.OP_TEST_EMAILADDRESS_TEMPLATE_SUFFIX }}
 
     - name: Teamscale Upload
       if: ${{ always() }}
