@@ -40,7 +40,7 @@ public enum Flags {
 	}
 
 	/**
-	 * Converts the provided classe and value to a commandline flag, e.g. "--flag=value".. Returns
+	 * Converts the provided class and value to a commandline flag, e.g. "--flag=value". Returns
 	 * null if the value is null.
 	 */
 	public static String set(Class<? extends Entity> flag, String value) {

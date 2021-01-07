@@ -305,7 +305,7 @@ class OnePasswordTest {
 
 		private void assertDirectAccess(Vault vault, Entity.UserOrGroup userOrGroup,
 				boolean hasAccess) throws IOException {
-			UserOrGroup[] members = members(vault, userOrGroup.getClass());
+			UserOrGroup[] members = listDirectAccessTo(vault, userOrGroup.getClass());
 			assertContainsEntiy(members, userOrGroup, hasAccess);
 		}
 
@@ -331,14 +331,14 @@ class OnePasswordTest {
 			}
 		}
 
-		private Entity.UserOrGroup[] members(Vault vault, Class<? extends Entity.UserOrGroup> type)
-				throws IOException {
+		private Entity.UserOrGroup[] listDirectAccessTo(Vault vault,
+				Class<? extends Entity.UserOrGroup> type) throws IOException {
 			if (type.equals(User.class)) {
-				return op.access().users(vault);
+				return op.users().listWithDirectAccessTo(vault);
 			}
 
 			if (type.equals(Group.class)) {
-				return op.access().groups(vault);
+				return op.groups().listWithDirectAccessTo(vault);
 			}
 
 			return Assertions.fail("Unknown type: " + type);

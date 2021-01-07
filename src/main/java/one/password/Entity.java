@@ -22,6 +22,18 @@ public interface Entity {
 		return singular(clazz) + "s";
 	}
 
+	/**
+	 * Converts the provided entity to a filter flag with the entity uuid, e.g. "--user=xxx".
+	 * Returns null if the entity is null.
+	 */
+	public static String filterFlag(Entity entity) {
+		if (entity == null) {
+			return null;
+		}
+
+		return Flags.set(entity.getClass(), entity.getUuid());
+	}
+
 	/** Base class for 1password entities. */
 	public abstract static class Base implements Entity {
 		private String uuid;

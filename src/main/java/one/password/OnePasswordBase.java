@@ -29,8 +29,8 @@ public abstract class OnePasswordBase {
 		return new UserEntityCommand();
 	}
 
-	public NamedEntityCommand<Group> groups() {
-		return new NamedEntityCommand<>(Group.class);
+	public GroupEntityCommand groups() {
+		return new GroupEntityCommand();
 	}
 
 	public VaultEntityCommand vaults() {
@@ -52,6 +52,18 @@ public abstract class OnePasswordBase {
 	protected String execute(FunctionWithException<Op, String, IOException> action)
 			throws IOException {
 		return action.apply(op);
+	}
+
+	private static <E extends Entity> E[] list(Internal<E> internal) throws IOException {
+		return listRelated(internal, null);
+	}
+
+	private static <E extends Entity, R extends Entity> E[] listRelated(Internal<E> internal,
+			R related) throws IOException {
+		String filterFlag = Entity.filterFlag(related);
+		String json =
+				internal.execute(op -> op.list(internal.session(), internal.type(), filterFlag));
+		return Json.deserialize(json, Utils.arrayType(internal.type()));
 	}
 
 	public interface Internal<E extends Entity> {
@@ -108,9 +120,7 @@ public abstract class OnePasswordBase {
 
 		/** Lists all entities */
 		public E[] list() throws IOException {
-			String json =
-					internal().execute(op -> op.list(internal().session(), internal().type()));
-			return Json.deserialize(json, Utils.arrayType(internal().type()));
+			return OnePasswordBase.list(internal());
 		}
 
 		/** Saves modification to the given entity. */
@@ -132,15 +142,23 @@ public abstract class OnePasswordBase {
 		}
 	}
 
-	/** Commands for listing entities with access to given objects. */
-	public interface ListWithAccessEntityCommand<E extends Entity, A extends Entity>
-			extends TypeEntityCommand<E> {
-		/** Lists all entities with access by another entity. */
-		default public E[] listWithAccessBy(A accessible) throws IOException {
-			String filterFlag = Flags.set(accessible.getClass(), accessible.getUuid());
-			String json = internal()
-					.execute(op -> op.list(internal().session(), internal().type(), filterFlag));
-			return Json.deserialize(json, Utils.arrayType(internal().type()));
+	/** Commands for listing entities that are accessible by other entities. */
+	public interface ListWithAccessByCommand<Accessible extends Entity, Accessor extends Entity>
+			extends TypeEntityCommand<Accessible> {
+		/** Lists all entities that are accessible by other entities. */
+		default public Accessible[] listWithAccessBy(Accessor accessor) throws IOException {
+			return listRelated(internal(), accessor);
+		}
+	}
+
+	/**
+	 * Commands for listing entities that have been granted direct access to other entities.
+	 */
+	public interface ListWithDirectAccessToCommand<Accessor extends Entity, Accessible extends Entity>
+			extends TypeEntityCommand<Accessor> {
+		/** Lists all entities that have access to other entities (members of). */
+		default public Accessor[] listWithDirectAccessTo(Accessible accessible) throws IOException {
+			return listRelated(internal(), accessible);
 		}
 	}
 
@@ -157,18 +175,19 @@ public abstract class OnePasswordBase {
 
 		/** Creates an entity. */
 		public T create(String name, String description) throws IOException {
-			return createWithArguments(name, description);
+			return createWithDescriptionAndArguments(name, description);
 		}
 
-		protected T createWithArguments(String name, String description, String... arguments)
-				throws IOException {
+		protected T createWithDescriptionAndArguments(String name, String description,
+				String... arguments) throws IOException {
 			return createWithArguments(name,
 					Utils.asArray(Flags.DESCRIPTION.is(description), arguments));
 		}
 	}
 
 	/** Commands for manipulating users. */
-	public class UserEntityCommand extends EntityCommand<User> {
+	public class UserEntityCommand extends EntityCommand<User>
+			implements ListWithDirectAccessToCommand<User, Vault> {
 		UserEntityCommand() {
 			super(User.class);
 		}
@@ -184,9 +203,17 @@ public abstract class OnePasswordBase {
 		}
 	}
 
+	/** Commands for manipulating groups. */
+	public class GroupEntityCommand extends NamedEntityCommand<Group> implements
+			ListWithAccessByCommand<Group, User>, ListWithDirectAccessToCommand<Group, Vault> {
+		GroupEntityCommand() {
+			super(Group.class);
+		}
+	}
+
 	/** Commands for manipulating vaults. */
 	public class VaultEntityCommand extends NamedEntityCommand<Vault>
-			implements ListWithAccessEntityCommand<Vault, Entity.UserOrGroup> {
+			implements ListWithAccessByCommand<Vault, Entity.UserOrGroup> {
 		VaultEntityCommand() {
 			super(Vault.class);
 		}
@@ -212,23 +239,6 @@ public abstract class OnePasswordBase {
 		/** Revoke a group's access to a vault. */
 		public void remove(Group group, Vault vault) throws IOException {
 			execute(op -> op.remove(session, group.getClass(), group.getUuid(), vault.getUuid()));
-		}
-
-		/** Lists users of the vault. */
-		public User[] users(Vault entity) throws IOException {
-			return members(entity, User.class);
-		}
-
-		/** Lists groups of the vault. */
-		public Group[] groups(Vault entity) throws IOException {
-			return members(entity, Group.class);
-		}
-
-		private <M extends Entity.UserOrGroup> M[] members(Vault entity, Class<M> type)
-				throws IOException {
-			String json = execute(
-					op -> op.list(session, type, entity.op_listUserFlag().is(entity.getUuid())));
-			return Json.deserialize(json, Utils.arrayType(type));
 		}
 
 		/** Grant a user access to a group. */
