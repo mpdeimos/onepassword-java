@@ -58,7 +58,7 @@ public class User extends Entity.Base implements Entity.UserOrGroup {
 		return lastAuthAt;
 	}
 
-	public Stream<String> saveArguments() {
+	public Stream<String> op_editArguments() {
 		return Stream.of(Flags.NAME.is(name));
 	}
 }

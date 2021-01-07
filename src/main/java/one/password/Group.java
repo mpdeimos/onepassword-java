@@ -5,7 +5,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import one.password.cli.Flags;
 
-public class Group extends Entity.Named implements Entity.UserOrGroup {
+public class Group extends Entity.Named implements Entity.UserOrGroup, Entity.UserAccessible {
 
 	public void setDescription(String description) {
 		this.description = description;
@@ -24,7 +24,13 @@ public class Group extends Entity.Named implements Entity.UserOrGroup {
 	}
 
 	@Override
-	public Stream<String> saveArguments() {
-		return Stream.concat(super.saveArguments(), Stream.of(Flags.DESCRIPTION.is(description)));
+	public Stream<String> op_editArguments() {
+		return Stream.concat(super.op_editArguments(),
+				Stream.of(Flags.DESCRIPTION.is(description)));
+	}
+
+	@Override
+	public Flags op_listUserFlag() {
+		return Flags.GROUP;
 	}
 }

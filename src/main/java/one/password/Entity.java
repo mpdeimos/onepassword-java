@@ -9,8 +9,8 @@ public interface Entity {
 	/** Returns the entities Uuid. */
 	public String getUuid();
 
-	/** Arguments for saving this entity via the 1password CLI. */
-	Stream<String> saveArguments();
+	/** For internal use: Arguments for editing this entity via the 1password CLI. */
+	Stream<String> op_editArguments();
 
 	/** Returns the singular name of the entity class. */
 	public static String singular(Class<? extends Entity> clazz) {
@@ -51,7 +51,7 @@ public interface Entity {
 			return description;
 		}
 
-		public Stream<String> saveArguments() {
+		public Stream<String> op_editArguments() {
 			return Stream.of(Flags.NAME.is(name));
 		}
 	}
@@ -59,5 +59,11 @@ public interface Entity {
 	/** Marker interface for users and groups to grant access. */
 	public static interface UserOrGroup extends Entity {
 
+	}
+
+	/** Marker interface for entities users may have access to. */
+	public static interface UserAccessible extends Entity {
+		/** For internal use. The flag for the list users command. */
+		Flags op_listUserFlag();
 	}
 }

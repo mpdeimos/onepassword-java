@@ -223,6 +223,27 @@ class OnePasswordTest {
 			op.users().delete(user);
 			op.groups().delete(group);
 		}
+
+		@Test
+		void addUserToVault() throws IOException {
+			User user = users.createTestEntity();
+			Vault vault = vaults.createTestEntity();
+			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
+					.doesNotContain(user.getUuid());
+
+			op.access().add(user, vault);
+			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
+					.contains(user.getUuid());
+
+			op.access().remove(user, vault);
+			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
+					.doesNotContain(user.getUuid());
+
+			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, vault));
+
+			op.users().delete(user);
+			op.vaults().delete(vault);
+		}
 	}
 
 	abstract static class EntityCommandTest<E extends Entity, C extends EntityCommand<E>> {

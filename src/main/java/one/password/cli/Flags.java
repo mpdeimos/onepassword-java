@@ -2,7 +2,7 @@ package one.password.cli;
 
 /** Common 1password CLI flags */
 public enum Flags {
-	SHORTHAND, SESSION, RAW, NAME, DESCRIPTION, LANGUAGE, ROLE, GROUP;
+	SHORTHAND, SESSION, RAW, NAME, DESCRIPTION, LANGUAGE, ROLE, GROUP, VAULT;
 
 	/**
 	 * Converts the flag to its String representation by converting it to lowercase and prepending
