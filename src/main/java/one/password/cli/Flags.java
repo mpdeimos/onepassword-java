@@ -2,15 +2,15 @@ package one.password.cli;
 
 /** Common 1password CLI flags */
 public enum Flags {
-	SHORTHAND, SESSION, RAW, NAME, DESCRIPTION, LANGUAGE, ROLE, GROUP, VAULT;
+	SHORTHAND, SESSION, RAW, NAME, DESCRIPTION, LANGUAGE, ROLE, GROUP, VAULT, ALLOW_ADMINS_TO_MANAGE;
 
 	/**
 	 * Converts the flag to its String representation by converting it to lowercase and prepending
-	 * "--", e.g. "FLAG" would become "--flag".
+	 * "--", e.g. "MY_FLAG" would become "--my-flag".
 	 */
 	@Override
 	public String toString() {
-		return "--" + this.name().toLowerCase();
+		return "--" + this.name().toLowerCase().replace('_', '-');
 	}
 
 	/**

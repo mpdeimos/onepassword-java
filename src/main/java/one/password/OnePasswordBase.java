@@ -32,9 +32,8 @@ public abstract class OnePasswordBase {
 		return new NamedEntityCommand<>(Group.class);
 	}
 
-	// TODO create --allow-admins-to-manage
-	public NamedEntityCommand<Vault> vaults() {
-		return new NamedEntityCommand<>(Vault.class);
+	public VaultEntityCommand vaults() {
+		return new VaultEntityCommand();
 	}
 
 	public AccessCommand access() {
@@ -83,6 +82,11 @@ public abstract class OnePasswordBase {
 		public void delete(T entity) throws IOException {
 			execute(() -> op.delete(session, type, entity.getUuid()));
 		}
+
+		protected T createWithArguments(String name, String... arguments) throws IOException {
+			String json = execute(() -> op.create(session, type, name, arguments));
+			return Json.deserialize(json, type);
+		}
 	}
 
 	/** Commands for manipulating an entity that is identified by name. */
@@ -93,18 +97,22 @@ public abstract class OnePasswordBase {
 
 		/** Creates an entity. */
 		public T create(String name) throws IOException {
-			return create(name, null);
+			return create(name, (String) null);
 		}
 
 		/** Creates an entity. */
 		public T create(String name, String description) throws IOException {
-			String json = execute(
-					() -> op.create(session, type, name, Flags.DESCRIPTION.is(description)));
-			return Json.deserialize(json, type);
+			return createWithArguments(name, description);
+		}
+
+		protected T createWithArguments(String name, String description, String... arguments)
+				throws IOException {
+			return createWithArguments(name,
+					Utils.asArray(Flags.DESCRIPTION.is(description), arguments));
 		}
 	}
 
-	/** Commands for manipulating an user. */
+	/** Commands for manipulating users. */
 	public class UserEntityCommand extends EntityCommand<User> {
 		UserEntityCommand() {
 			super(User.class);
@@ -117,9 +125,24 @@ public abstract class OnePasswordBase {
 
 		/** Creates an user and specifies its language, e.g. "en" or "de". */
 		public User create(String emailAddress, String name, String language) throws IOException {
-			String json = execute(() -> op.create(session, type, emailAddress, name,
-					Flags.LANGUAGE.is(language)));
-			return Json.deserialize(json, type);
+			return createWithArguments(emailAddress, name, Flags.LANGUAGE.is(language));
+		}
+	}
+
+	/** Commands for manipulating vaults. */
+	public class VaultEntityCommand extends NamedEntityCommand<Vault> {
+		VaultEntityCommand() {
+			super(Vault.class);
+		}
+
+		/**
+		 * Creates a new vault optionally restricting access for admins. Default is that admins have
+		 * access.
+		 */
+		public Vault create(String name, String description, boolean adminAccess)
+				throws IOException {
+			return createWithArguments(name, description,
+					Flags.ALLOW_ADMINS_TO_MANAGE.is(Boolean.toString(adminAccess)));
 		}
 	}
 

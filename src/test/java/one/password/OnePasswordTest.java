@@ -2,6 +2,7 @@ package one.password;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
@@ -12,6 +13,7 @@ import one.password.Entity.UserOrGroup;
 import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
 import one.password.OnePasswordBase.UserEntityCommand;
+import one.password.OnePasswordBase.VaultEntityCommand;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
@@ -98,7 +100,8 @@ class OnePasswordTest {
 			Assertions.assertThat(user.getFirstName()).isEqualTo("user name");
 			Assertions.assertThat(user.getLastName()).isEmpty();
 			Assertions.assertThat(user.getLanguage()).isEqualTo("en");
-			Assertions.assertThat(user.getCreatedAt()).isBeforeOrEqualTo(ZonedDateTime.now())
+			Assertions.assertThat(user.getCreatedAt())
+					.isCloseTo(ZonedDateTime.now(), Assertions.within(5, ChronoUnit.SECONDS))
 					.isEqualTo(user.getUpdatedAt());
 			Assertions.assertThat(user.getLastAuthAt()).isBefore(user.getCreatedAt());
 			command.delete(user);
@@ -131,7 +134,9 @@ class OnePasswordTest {
 	}
 
 	@Nested
-	class Groups extends NamedEntityCommandTest<Group> {
+	class Groups extends NamedEntityCommandTest<Group, NamedEntityCommand<Group>> {
+		private static final String ADMINISTRATORS = "Administrators";
+
 		protected Groups(OnePassword op) {
 			super(Group.class, op.groups());
 		}
@@ -139,13 +144,13 @@ class OnePasswordTest {
 		@Test
 		void listExisting(OnePassword op) throws IOException {
 			Assertions.assertThat(op.groups().list()).extracting(Group::getName)
-					.contains("Recovery", "Administrators", "Owners", "Administrators");
+					.contains("Recovery", ADMINISTRATORS, "Owners");
 		}
 
 		@Test
 		void createdAt() throws IOException {
-			Assertions.assertThat(createTestEntity().getCreatedAt())
-					.isBeforeOrEqualTo(ZonedDateTime.now());
+			Assertions.assertThat(createTestEntity().getCreatedAt()).isCloseTo(ZonedDateTime.now(),
+					Assertions.within(5, ChronoUnit.SECONDS));
 		}
 
 		@Test
@@ -165,7 +170,7 @@ class OnePasswordTest {
 	}
 
 	@Nested
-	class Vaults extends NamedEntityCommandTest<Vault> {
+	class Vaults extends NamedEntityCommandTest<Vault, VaultEntityCommand> {
 		protected Vaults(OnePassword op) {
 			super(Vault.class, op.vaults());
 		}
@@ -174,6 +179,20 @@ class OnePasswordTest {
 		void listExisting(OnePassword op) throws IOException {
 			Assertions.assertThat(op.vaults().list()).extracting(Vault::getName).contains("Private",
 					"Shared");
+		}
+
+		@Test
+		void withRestrictedAccess(OnePassword op) throws IOException {
+			Access access = new Access(op);
+			Group admins = op.groups().get(Groups.ADMINISTRATORS);
+
+			Vault vault = command.create("vault");
+			access.assertAccess(vault, admins, true);
+			command.delete(vault);
+
+			vault = command.create("vault", "description", false);
+			access.assertAccess(vault, admins, false);
+			command.delete(vault);
 		}
 	}
 
@@ -302,7 +321,6 @@ class OnePasswordTest {
 
 			return Assertions.fail("Unknown type: " + type);
 		}
-
 	}
 
 	abstract static class EntityCommandTest<E extends Entity, C extends EntityCommand<E>> {
@@ -358,11 +376,11 @@ class OnePasswordTest {
 		}
 	}
 
-	abstract static class NamedEntityCommandTest<E extends Entity.Named>
-			extends EntityCommandTest<E, NamedEntityCommand<E>> {
+	abstract static class NamedEntityCommandTest<E extends Entity.Named, C extends NamedEntityCommand<E>>
+			extends EntityCommandTest<E, C> {
 		private static final String TEST_ITEM_PREFIX = "__test__";
 
-		protected NamedEntityCommandTest(Class<E> type, NamedEntityCommand<E> command) {
+		protected NamedEntityCommandTest(Class<E> type, C command) {
 			super(type, command);
 		}
 
