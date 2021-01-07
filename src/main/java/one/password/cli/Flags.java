@@ -1,7 +1,5 @@
 package one.password.cli;
 
-import one.password.Entity;
-
 /** Common 1password CLI flags */
 public enum Flags {
 	SHORTHAND, SESSION, RAW, NAME, DESCRIPTION, LANGUAGE, ROLE, GROUP, VAULT, ALLOW_ADMINS_TO_MANAGE;
@@ -20,10 +18,6 @@ public enum Flags {
 	 * if the value is null.
 	 */
 	public String is(String value) {
-		if (value == null) {
-			return null;
-		}
-
 		return set(this.name().toLowerCase().replace('_', '-'), value);
 	}
 
@@ -31,19 +25,11 @@ public enum Flags {
 	 * Converts the provided Strings to a commandline flag, e.g. "--flag=value". Returns null if the
 	 * value is null.
 	 */
-	private static String set(String flag, String value) {
+	public static String set(String flag, String value) {
 		if (value == null) {
 			return null;
 		}
 
 		return "--" + flag + "=" + value;
-	}
-
-	/**
-	 * Converts the provided class and value to a commandline flag, e.g. "--flag=value". Returns
-	 * null if the value is null.
-	 */
-	public static String set(Class<? extends Entity> flag, String value) {
-		return set(flag.getSimpleName().toLowerCase(), value);
 	}
 }

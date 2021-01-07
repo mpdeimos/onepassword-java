@@ -31,7 +31,7 @@ public interface Entity {
 			return null;
 		}
 
-		return Flags.set(entity.getClass(), entity.getUuid());
+		return Flags.set(entity.getClass().getSimpleName().toLowerCase(), entity.getUuid());
 	}
 
 	/** Base class for 1password entities. */
