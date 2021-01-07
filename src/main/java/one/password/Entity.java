@@ -5,17 +5,12 @@ import com.google.gson.annotations.SerializedName;
 import one.password.cli.Flags;
 
 /** Base class for 1password entities. */
-public abstract class Entity {
-	private String uuid;
-
-	public String getUuid() {
-		return uuid;
-	}
+public interface Entity {
+	/** Returns the entities Uuid. */
+	public String getUuid();
 
 	/** Arguments for saving this entity via the 1password CLI. */
-	Stream<String> saveArguments() {
-		return Stream.empty();
-	}
+	Stream<String> saveArguments();
 
 	/** Returns the singular name of the entity class. */
 	public static String singular(Class<? extends Entity> clazz) {
@@ -27,8 +22,18 @@ public abstract class Entity {
 		return singular(clazz) + "s";
 	}
 
+	/** Base class for 1password entities. */
+	public abstract static class Base implements Entity {
+		private String uuid;
+
+		@Override
+		public String getUuid() {
+			return uuid;
+		}
+	}
+
 	/** Base class for entities identified by name. */
-	public abstract static class Named extends Entity {
+	public abstract static class Named extends Base {
 		private String name;
 
 		public String getName() {
@@ -46,9 +51,13 @@ public abstract class Entity {
 			return description;
 		}
 
-		@Override
-		Stream<String> saveArguments() {
-			return Stream.concat(super.saveArguments(), Stream.of(Flags.NAME.is(name)));
+		public Stream<String> saveArguments() {
+			return Stream.of(Flags.NAME.is(name));
 		}
+	}
+
+	/** Marker interface for users and groups to grant access. */
+	public static interface UserOrGroup extends Entity {
+
 	}
 }

@@ -2,7 +2,7 @@ package one.password.cli;
 
 /** 1password CLI commands */
 public enum Commands {
-	VERSION("--version"), SIGNIN, SIGNOUT, GET, LIST, CREATE, EDIT, DELETE;
+	VERSION("--version"), SIGNIN, SIGNOUT, GET, LIST, CREATE, EDIT, DELETE, ADD, REMOVE;
 
 	private String name;
 

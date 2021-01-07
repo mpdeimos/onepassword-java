@@ -109,12 +109,14 @@ class OnePasswordTest {
 		@Test
 		void editName() throws IOException {
 			User user = command.create(secondaryIdentifier("email"), "user name");
+			TestUtils.waitOneSecond();
 			user.setName("new name");
 			command.edit(user);
 			User editedUser = command.get(user.getUuid());
 			Assertions.assertThat(editedUser.getName()).isEqualTo("new name");
 			Assertions.assertThat(editedUser.getFirstName()).isEqualTo("new name");
 			Assertions.assertThat(editedUser.getLastName()).isEmpty();
+			Assertions.assertThat(editedUser.getUpdatedAt()).isAfter(user.getUpdatedAt());
 			command.delete(editedUser);
 			Assertions.assertThatIOException().isThrownBy(() -> command.edit(editedUser));
 		}
@@ -149,10 +151,15 @@ class OnePasswordTest {
 		void setDescription() throws IOException {
 			Group group = command.create(secondaryIdentifier("group"), "description");
 			Assertions.assertThat(group.getDescription()).isEqualTo("description");
+			Assertions.assertThat(group.getUpdatedAt()).isEmpty();
 			group.setDescription("new description");
+			TestUtils.waitOneSecond();
 			command.edit(group);
-			Assertions.assertThat(command.get(group.getUuid()).getDescription())
-					.isEqualTo("new description");
+			Group editedGroup = command.get(group.getUuid());
+			Assertions.assertThat(editedGroup.getDescription()).isEqualTo("new description");
+			Assertions.assertThat(editedGroup.getUpdatedAt()).isPresent();
+			Assertions.assertThat(editedGroup.getUpdatedAt().get())
+					.isAfter(editedGroup.getCreatedAt());
 		}
 	}
 
@@ -166,6 +173,55 @@ class OnePasswordTest {
 		void listExisting(OnePassword op) throws IOException {
 			Assertions.assertThat(op.vaults().list()).extracting(Vault::getName).contains("Private",
 					"Shared");
+		}
+	}
+
+	@Nested
+	class Access {
+		private OnePassword op;
+		final Users users;
+		final Groups groups;
+		final Vaults vaults;
+
+		protected Access(OnePassword op) {
+			this.op = op;
+			users = new Users(op);
+			groups = new Groups(op);
+			vaults = new Vaults(op);
+		}
+
+		@BeforeEach
+		void cleanup() {
+			vaults.cleanup();
+			users.cleanup();
+			vaults.cleanup();
+		}
+
+		@Test
+		void addUserToGroup() throws IOException {
+			User user = users.createTestEntity();
+			Group group = groups.createTestEntity();
+			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
+					.doesNotContain(user.getUuid());
+
+			op.access().add(user, group);
+			Assertions.assertThat(op.access().users(group).entrySet())
+					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
+							&& entry.getValue() == Role.MEMBER));
+
+			op.access().add(user, group, Role.MANAGER);
+			Assertions.assertThat(op.access().users(group).entrySet())
+					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
+							&& entry.getValue() == Role.MANAGER));
+
+			op.access().remove(user, group);
+			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
+					.doesNotContain(user.getUuid());
+
+			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, group));
+
+			op.users().delete(user);
+			op.groups().delete(group);
 		}
 	}
 

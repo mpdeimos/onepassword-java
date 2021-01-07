@@ -4,7 +4,7 @@ import java.time.ZonedDateTime;
 import java.util.stream.Stream;
 import one.password.cli.Flags;
 
-public class User extends Entity {
+public class User extends Entity.Base implements Entity.UserOrGroup {
 
 	private String email;
 
@@ -58,8 +58,7 @@ public class User extends Entity {
 		return lastAuthAt;
 	}
 
-	@Override
-	Stream<String> saveArguments() {
-		return Stream.concat(super.saveArguments(), Stream.of(Flags.NAME.is(name)));
+	public Stream<String> saveArguments() {
+		return Stream.of(Flags.NAME.is(name));
 	}
 }

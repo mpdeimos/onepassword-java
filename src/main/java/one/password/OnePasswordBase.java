@@ -1,6 +1,10 @@
 package one.password;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import one.password.cli.Flags;
 import one.password.cli.Op;
 import one.password.util.Json;
@@ -31,6 +35,10 @@ public abstract class OnePasswordBase {
 	// TODO create --allow-admins-to-manage
 	public NamedEntityCommand<Vault> vaults() {
 		return new NamedEntityCommand<>(Vault.class);
+	}
+
+	public AccessCommand access() {
+		return new AccessCommand();
 	}
 
 	public Op op() {
@@ -72,7 +80,7 @@ public abstract class OnePasswordBase {
 		}
 
 		/** Deletes an entity. */
-		public void delete(Entity entity) throws IOException {
+		public void delete(T entity) throws IOException {
 			execute(() -> op.delete(session, type, entity.getUuid()));
 		}
 	}
@@ -112,6 +120,47 @@ public abstract class OnePasswordBase {
 			String json = execute(() -> op.create(session, type, emailAddress, name,
 					Flags.LANGUAGE.is(language)));
 			return Json.deserialize(json, type);
+		}
+	}
+
+	/** Command for granting or revoking access to entities. */
+	public class AccessCommand {
+		/** Grant a user or group access to a vault. */
+		public void add(Entity.UserOrGroup userOrGroup, Vault vault) throws IOException {
+			execute(() -> op.add(session, userOrGroup.getClass(), userOrGroup.getUuid(),
+					vault.getUuid()));
+		}
+
+		/** Revoke a user's or group's access to a vault. */
+		public void remove(Entity.UserOrGroup userOrGroup, Vault vault) throws IOException {
+			execute(() -> op.remove(session, userOrGroup.getClass(), userOrGroup.getUuid(),
+					vault.getUuid()));
+		}
+
+		/** Grant a user access to a group. */
+		public void add(User user, Group group) throws IOException {
+			add(user, group, null);
+		}
+
+		/** Grant a user access to a group with given permission role. */
+		public void add(User user, Group group, Role role) throws IOException {
+			execute(() -> op.add(session, User.class, user.getUuid(), group.getUuid(),
+					Flags.ROLE.is(Objects.toString(role, null))));
+		}
+
+		/** Lists users of the group with role permissions. */
+		public Map<User, Role> users(Group group) throws IOException {
+			String json =
+					execute(() -> op.list(session, User.class, Flags.GROUP.is(group.getUuid())));
+			User[] users = Json.deserialize(json, User[].class);
+			Role.JsonWrapper[] roles = Json.deserialize(json, Role.JsonWrapper[].class);
+			return IntStream.range(0, Math.min(users.length, roles.length)).boxed()
+					.collect(Collectors.toMap(i -> users[i], i -> roles[i].getRole()));
+		}
+
+		/** Revoke a user's access to a group. */
+		public void remove(User user, Group group) throws IOException {
+			execute(() -> op.remove(session, User.class, user.getUuid(), group.getUuid()));
 		}
 	}
 }

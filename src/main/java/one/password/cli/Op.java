@@ -50,8 +50,9 @@ public class Op {
 	}
 
 	/** Lists all items of a given entity type. */
-	public <T extends Entity> String list(Session session, Class<T> entity) throws IOException {
-		return execute(session, Commands.LIST, Entity.plural(entity));
+	public <T extends Entity> String list(Session session, Class<T> entity, String... arguments)
+			throws IOException {
+		return execute(session, Commands.LIST, Utils.asArray(Entity.plural(entity), arguments));
 	}
 
 	/** Gets an item of a given entity type specified by name or uuid. */
@@ -79,6 +80,20 @@ public class Op {
 	public String delete(Session session, Class<? extends Entity> entity, String uuid)
 			throws IOException {
 		return execute(session, Commands.DELETE, Entity.singular(entity), uuid);
+	}
+
+	/** Grant access to groups or vaults. */
+	public String add(Session session, Class<? extends Entity.UserOrGroup> entity,
+			String userOrGroupUuid, String granteeUuid, String... arguments) throws IOException {
+		return execute(session, Commands.ADD,
+				Utils.asArray(Entity.singular(entity), userOrGroupUuid, granteeUuid, arguments));
+	}
+
+	/** Revokes access from groups or vaults. */
+	public String remove(Session session, Class<? extends Entity.UserOrGroup> entity,
+			String userOrGroupUuid, String granteeUuid, String... arguments) throws IOException {
+		return execute(session, Commands.REMOVE,
+				Utils.asArray(Entity.singular(entity), userOrGroupUuid, granteeUuid, arguments));
 	}
 
 	/** Prints the version number of the installed 1password CLI. */

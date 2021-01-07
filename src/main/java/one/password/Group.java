@@ -1,10 +1,11 @@
 package one.password;
 
 import java.time.ZonedDateTime;
+import java.util.Optional;
 import java.util.stream.Stream;
 import one.password.cli.Flags;
 
-public class Group extends Entity.Named {
+public class Group extends Entity.Named implements Entity.UserOrGroup {
 
 	public void setDescription(String description) {
 		this.description = description;
@@ -16,8 +17,14 @@ public class Group extends Entity.Named {
 		return createdAt;
 	}
 
+	private ZonedDateTime updatedAt;
+
+	public Optional<ZonedDateTime> getUpdatedAt() {
+		return Optional.ofNullable(updatedAt);
+	}
+
 	@Override
-	Stream<String> saveArguments() {
+	public Stream<String> saveArguments() {
 		return Stream.concat(super.saveArguments(), Stream.of(Flags.DESCRIPTION.is(description)));
 	}
 }

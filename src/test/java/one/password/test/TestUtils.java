@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import one.password.cli.Op;
@@ -50,5 +51,11 @@ public class TestUtils {
 			Assertions.assertThat(e).doesNotThrowAnyException();
 			return null;
 		}
+	}
+
+	/** Waits for one second. */
+	public static void waitOneSecond() {
+		Assertions.assertThatCode(() -> Thread.sleep(Duration.ofSeconds(1).toMillis()))
+				.doesNotThrowAnyException();
 	}
 }
