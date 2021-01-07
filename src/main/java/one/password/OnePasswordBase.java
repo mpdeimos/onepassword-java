@@ -135,6 +135,23 @@ public abstract class OnePasswordBase {
 			execute(() -> op.remove(session, group.getClass(), group.getUuid(), vault.getUuid()));
 		}
 
+		/** Lists users of the vault. */
+		public User[] users(Vault entity) throws IOException {
+			return members(entity, User.class);
+		}
+
+		/** Lists groups of the vault. */
+		public Group[] groups(Vault entity) throws IOException {
+			return members(entity, Group.class);
+		}
+
+		private <M extends Entity.UserOrGroup> M[] members(Vault entity, Class<M> type)
+				throws IOException {
+			String json = execute(
+					() -> op.list(session, type, entity.op_listUserFlag().is(entity.getUuid())));
+			return Json.deserialize(json, Utils.arrayType(type));
+		}
+
 		/** Grant a user access to a group. */
 		public void add(User user, Entity.UserAccessible entity) throws IOException {
 			add(user, entity, null);
@@ -150,7 +167,7 @@ public abstract class OnePasswordBase {
 					Flags.ROLE.is(Objects.toString(role, null))));
 		}
 
-		/** Lists users of the group or vault with role permissions. */
+		/** Lists users of the group with role permissions. */
 		public Map<User, Role> users(Group entity) throws IOException {
 			String json = execute(() -> op.list(session, User.class,
 					entity.op_listUserFlag().is(entity.getUuid())));
@@ -158,13 +175,6 @@ public abstract class OnePasswordBase {
 			Role.JsonWrapper[] roles = Json.deserialize(json, Role.JsonWrapper[].class);
 			return IntStream.range(0, Math.min(users.length, roles.length)).boxed()
 					.collect(Collectors.toMap(i -> users[i], i -> roles[i].getRole()));
-		}
-
-		/** Lists users of the group or vault with role permissions. */
-		public User[] users(Vault entity) throws IOException {
-			String json = execute(() -> op.list(session, User.class,
-					entity.op_listUserFlag().is(entity.getUuid())));
-			return Json.deserialize(json, User[].class);
 		}
 
 		/** Revoke a user's access to a group or vault. */

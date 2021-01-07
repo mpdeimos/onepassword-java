@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import one.password.Entity.UserOrGroup;
 import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
 import one.password.OnePasswordBase.UserEntityCommand;
@@ -228,22 +229,80 @@ class OnePasswordTest {
 		void addUserToVault() throws IOException {
 			User user = users.createTestEntity();
 			Vault vault = vaults.createTestEntity();
-			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
-					.doesNotContain(user.getUuid());
+			assertAccess(vault, user, false);
 
 			op.access().add(user, vault);
-			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
-					.contains(user.getUuid());
+			assertAccess(vault, user, true);
 
 			op.access().remove(user, vault);
-			Assertions.assertThat(op.access().users(vault)).extracting(User::getUuid)
-					.doesNotContain(user.getUuid());
+			assertAccess(vault, user, false);
 
 			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, vault));
 
 			op.users().delete(user);
 			op.vaults().delete(vault);
 		}
+
+
+		@Test
+		void addGroupToVault() throws IOException {
+			User user = users.createTestEntity();
+			Group group = groups.createTestEntity();
+			Vault vault = vaults.createTestEntity();
+			assertAccess(vault, user, false, group, false);
+
+			op.access().add(group, vault);
+			assertAccess(vault, user, false, group, true);
+
+			// Adding user to group, does not list the user
+			op.access().add(user, group);
+			assertAccess(vault, user, false, group, true);
+
+			op.access().add(user, vault);
+			assertAccess(vault, user, true, group, true);
+
+			op.access().remove(group, vault);
+			assertAccess(vault, user, true, group, false);
+
+			op.access().remove(user, vault);
+			assertAccess(vault, user, false, group, false);
+
+			op.users().delete(user);
+			op.groups().delete(group);
+			op.vaults().delete(vault);
+		}
+
+		private void assertAccess(Vault vault, User user, boolean userAccess, Group group,
+				boolean groupAccess) throws IOException {
+			assertAccess(vault, user, userAccess);
+			assertAccess(vault, group, groupAccess);
+		}
+
+		private void assertAccess(Vault vault, Entity.UserOrGroup userOrGroup, boolean hasAccess)
+				throws IOException {
+			UserOrGroup[] members = members(vault, userOrGroup.getClass());
+			if (hasAccess) {
+				Assertions.assertThat(members).extracting(Entity::getUuid)
+						.contains(userOrGroup.getUuid());
+			} else {
+				Assertions.assertThat(members).extracting(Entity::getUuid)
+						.doesNotContain(userOrGroup.getUuid());
+			}
+		}
+
+		private Entity.UserOrGroup[] members(Vault vault, Class<? extends Entity.UserOrGroup> type)
+				throws IOException {
+			if (type.equals(User.class)) {
+				return op.access().users(vault);
+			}
+
+			if (type.equals(Group.class)) {
+				return op.access().groups(vault);
+			}
+
+			return Assertions.fail("Unknown type: " + type);
+		}
+
 	}
 
 	abstract static class EntityCommandTest<E extends Entity, C extends EntityCommand<E>> {
