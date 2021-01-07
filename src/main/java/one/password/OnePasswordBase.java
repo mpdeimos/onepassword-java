@@ -142,10 +142,15 @@ public abstract class OnePasswordBase {
 		}
 	}
 
-	/** Commands for listing entities that are accessible by other entities. */
+	/**
+	 * Commands for listing entities that are (transitively, e.g. via groups) accessible by other
+	 * entities.
+	 */
 	public interface ListWithAccessByCommand<Accessible extends Entity, Accessor extends Entity>
 			extends TypeEntityCommand<Accessible> {
-		/** Lists all entities that are accessible by other entities. */
+		/**
+		 * Lists all entities that are (transitively, e.g. via groups) accessible by other entities.
+		 */
 		default public Accessible[] listWithAccessBy(Accessor accessor) throws IOException {
 			return listRelated(internal(), accessor);
 		}

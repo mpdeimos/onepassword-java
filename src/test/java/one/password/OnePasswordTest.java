@@ -222,20 +222,24 @@ class OnePasswordTest {
 			Group group = groups.createTestEntity();
 			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
 					.doesNotContain(user.getUuid());
+			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
 			op.access().add(user, group);
 			Assertions.assertThat(op.access().users(group).entrySet())
 					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
 							&& entry.getValue() == Role.MEMBER));
+			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
 			op.access().add(user, group, Role.MANAGER);
 			Assertions.assertThat(op.access().users(group).entrySet())
 					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
 							&& entry.getValue() == Role.MANAGER));
+			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
 			op.access().remove(user, group);
 			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
 					.doesNotContain(user.getUuid());
+			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
 			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, group));
 
@@ -305,8 +309,8 @@ class OnePasswordTest {
 
 		private void assertDirectAccess(Vault vault, Entity.UserOrGroup userOrGroup,
 				boolean hasAccess) throws IOException {
-			UserOrGroup[] members = listDirectAccessTo(vault, userOrGroup.getClass());
-			assertContainsEntiy(members, userOrGroup, hasAccess);
+			UserOrGroup[] members = listDirectAccessTo(userOrGroup.getClass(), vault);
+			assertContainsEntity(members, userOrGroup, hasAccess);
 		}
 
 		private void assertTransitiveAccess(Vault vault, User user, boolean userAccess, Group group,
@@ -318,10 +322,10 @@ class OnePasswordTest {
 		private void assertTransitiveAccess(Vault vault, Entity.UserOrGroup userOrGroup,
 				boolean hasAccess) throws IOException {
 			Vault[] members = op.vaults().listWithAccessBy(userOrGroup);
-			assertContainsEntiy(members, vault, hasAccess);
+			assertContainsEntity(members, vault, hasAccess);
 		}
 
-		private void assertContainsEntiy(Entity[] entities, Entity entity, boolean contained) {
+		private void assertContainsEntity(Entity[] entities, Entity entity, boolean contained) {
 			if (contained) {
 				Assertions.assertThat(entities).extracting(Entity::getUuid)
 						.contains(entity.getUuid());
@@ -331,17 +335,18 @@ class OnePasswordTest {
 			}
 		}
 
-		private Entity.UserOrGroup[] listDirectAccessTo(Vault vault,
-				Class<? extends Entity.UserOrGroup> type) throws IOException {
-			if (type.equals(User.class)) {
-				return op.users().listWithDirectAccessTo(vault);
+		private Entity.UserOrGroup[] listDirectAccessTo(
+				Class<? extends Entity.UserOrGroup> accessorType, Vault accessible)
+				throws IOException {
+			if (accessorType.equals(User.class)) {
+				return op.users().listWithDirectAccessTo(accessible);
 			}
 
-			if (type.equals(Group.class)) {
-				return op.groups().listWithDirectAccessTo(vault);
+			if (accessorType.equals(Group.class)) {
+				return op.groups().listWithDirectAccessTo(accessible);
 			}
 
-			return Assertions.fail("Unknown type: " + type);
+			return Assertions.fail("Unknown type: " + accessorType);
 		}
 	}
 
