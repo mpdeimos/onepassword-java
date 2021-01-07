@@ -20,7 +20,6 @@ import one.password.test.TestUtils;
 import one.password.util.Utils;
 
 class OnePasswordTest {
-
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
 
@@ -187,11 +186,11 @@ class OnePasswordTest {
 			Group admins = op.groups().get(Groups.ADMINISTRATORS);
 
 			Vault vault = command.create("vault");
-			access.assertAccess(vault, admins, true);
+			access.assertDirectAccess(vault, admins, true);
 			command.delete(vault);
 
 			vault = command.create("vault", "description", false);
-			access.assertAccess(vault, admins, false);
+			access.assertDirectAccess(vault, admins, false);
 			command.delete(vault);
 		}
 	}
@@ -248,13 +247,13 @@ class OnePasswordTest {
 		void addUserToVault() throws IOException {
 			User user = users.createTestEntity();
 			Vault vault = vaults.createTestEntity();
-			assertAccess(vault, user, false);
+			assertDirectAccess(vault, user, false);
 
 			op.access().add(user, vault);
-			assertAccess(vault, user, true);
+			assertDirectAccess(vault, user, true);
 
 			op.access().remove(user, vault);
-			assertAccess(vault, user, false);
+			assertDirectAccess(vault, user, false);
 
 			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, vault));
 
@@ -268,44 +267,67 @@ class OnePasswordTest {
 			User user = users.createTestEntity();
 			Group group = groups.createTestEntity();
 			Vault vault = vaults.createTestEntity();
-			assertAccess(vault, user, false, group, false);
+			assertDirectAccess(vault, user, false, group, false);
+			assertTransitiveAccess(vault, user, false, group, false);
 
 			op.access().add(group, vault);
-			assertAccess(vault, user, false, group, true);
+			assertDirectAccess(vault, user, false, group, true);
+			assertTransitiveAccess(vault, user, false, group, true);
 
-			// Adding user to group, does not list the user
 			op.access().add(user, group);
-			assertAccess(vault, user, false, group, true);
+			// Adding user to group, does not list the user
+			assertDirectAccess(vault, user, false, group, true);
+			// But transitive access is granted
+			assertTransitiveAccess(vault, user, true, group, true);
 
 			op.access().add(user, vault);
-			assertAccess(vault, user, true, group, true);
+			assertDirectAccess(vault, user, true, group, true);
+			assertTransitiveAccess(vault, user, true, group, true);
 
 			op.access().remove(group, vault);
-			assertAccess(vault, user, true, group, false);
+			assertDirectAccess(vault, user, true, group, false);
+			assertTransitiveAccess(vault, user, true, group, false);
 
 			op.access().remove(user, vault);
-			assertAccess(vault, user, false, group, false);
+			assertDirectAccess(vault, user, false, group, false);
+			assertTransitiveAccess(vault, user, false, group, false);
 
 			op.users().delete(user);
 			op.groups().delete(group);
 			op.vaults().delete(vault);
 		}
 
-		private void assertAccess(Vault vault, User user, boolean userAccess, Group group,
+		private void assertDirectAccess(Vault vault, User user, boolean userAccess, Group group,
 				boolean groupAccess) throws IOException {
-			assertAccess(vault, user, userAccess);
-			assertAccess(vault, group, groupAccess);
+			assertDirectAccess(vault, user, userAccess);
+			assertDirectAccess(vault, group, groupAccess);
 		}
 
-		private void assertAccess(Vault vault, Entity.UserOrGroup userOrGroup, boolean hasAccess)
-				throws IOException {
+		private void assertDirectAccess(Vault vault, Entity.UserOrGroup userOrGroup,
+				boolean hasAccess) throws IOException {
 			UserOrGroup[] members = members(vault, userOrGroup.getClass());
-			if (hasAccess) {
-				Assertions.assertThat(members).extracting(Entity::getUuid)
-						.contains(userOrGroup.getUuid());
+			assertContainsEntiy(members, userOrGroup, hasAccess);
+		}
+
+		private void assertTransitiveAccess(Vault vault, User user, boolean userAccess, Group group,
+				boolean groupAccess) throws IOException {
+			assertTransitiveAccess(vault, user, userAccess);
+			assertTransitiveAccess(vault, group, groupAccess);
+		}
+
+		private void assertTransitiveAccess(Vault vault, Entity.UserOrGroup userOrGroup,
+				boolean hasAccess) throws IOException {
+			Vault[] members = op.vaults().listWithAccessBy(userOrGroup);
+			assertContainsEntiy(members, vault, hasAccess);
+		}
+
+		private void assertContainsEntiy(Entity[] entities, Entity entity, boolean contained) {
+			if (contained) {
+				Assertions.assertThat(entities).extracting(Entity::getUuid)
+						.contains(entity.getUuid());
 			} else {
-				Assertions.assertThat(members).extracting(Entity::getUuid)
-						.doesNotContain(userOrGroup.getUuid());
+				Assertions.assertThat(entities).extracting(Entity::getUuid)
+						.doesNotContain(entity.getUuid());
 			}
 		}
 
@@ -345,7 +367,7 @@ class OnePasswordTest {
 		protected abstract boolean isTestEntity(E entity);
 
 		protected E createTestEntity() throws IOException {
-			return createTestEntity(Utils.randomBase32(8));
+			return createTestEntity(type.getSimpleName() + "_" + Utils.randomBase32(8));
 		}
 
 		protected abstract E createTestEntity(String name) throws IOException;

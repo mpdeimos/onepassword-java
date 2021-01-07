@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
-import one.password.cli.Op;
+import one.password.util.SupplierWithException;
 
 /** Utility methods for unit testing. */
 public class TestUtils {
@@ -44,9 +44,9 @@ public class TestUtils {
 	}
 
 	/** Asserts that the action does not throw an {@link java.io.IOException}. */
-	public static <T> T assertNoIOException(Op.Action<T> action) {
+	public static <T> T assertNoIOException(SupplierWithException<T, IOException> action) {
 		try {
-			return action.execute();
+			return action.get();
 		} catch (IOException e) {
 			Assertions.assertThat(e).doesNotThrowAnyException();
 			return null;
