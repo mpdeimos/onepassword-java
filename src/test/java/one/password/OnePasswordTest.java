@@ -103,6 +103,8 @@ class OnePasswordTest {
 		@Test
 		void createUserWithAdditionalFields() throws IOException {
 			User user = command.create(secondaryId("email"), "user name");
+			Assertions.assertThat(user.getSecondaryId()).isEqualTo(user.getEmail());
+			Assertions.assertThat(user.toString()).isEqualTo(user.getEmail());
 			Assertions.assertThat(user.getEmail()).isEqualTo(secondaryId("email"));
 			Assertions.assertThat(user.getName()).isEqualTo("user name");
 			Assertions.assertThat(user.getFirstName()).isEqualTo("user name");
@@ -164,19 +166,23 @@ class OnePasswordTest {
 		 * our test data.
 		 */
 		@Test
-		void confirmAll(Session session) throws IOException {
-
+		void confirmMocked(OnePassword op, TestCredentials credentials) throws IOException {
+			User admin = op.users().get(credentials.getEmailAddress());
 			List<String> passedArguments = new ArrayList<>();
-			OnePasswordBase op = new OnePasswordMock(new Op() {
+			OnePasswordBase mock = new OnePasswordMock(new Op() {
 				public String execute(Session session, String... arguments) throws IOException {
+					passedArguments.clear();
 					passedArguments.addAll(Arrays.asList(arguments));
 					return "";
 				}
 			});
 
-			op.users().confirmAll();
-
+			Assertions.assertThatCode(() -> mock.users().confirmAll()).doesNotThrowAnyException();
 			Assertions.assertThat(passedArguments).isEqualTo(Arrays.asList("confirm", "--all"));
+
+			Assertions.assertThatCode(() -> mock.users().confirm(admin)).doesNotThrowAnyException();
+			Assertions.assertThat(passedArguments)
+					.isEqualTo(Arrays.asList("confirm", admin.getId()));
 		}
 
 		@Test
@@ -550,6 +556,8 @@ class OnePasswordTest {
 		@Test
 		void nameAndDescription() throws IOException {
 			E entity = command.create(secondaryId("name"));
+			Assertions.assertThat(entity.getSecondaryId()).isEqualTo(entity.getName());
+			Assertions.assertThat(entity.toString()).isEqualTo(entity.getName());
 			Assertions.assertThat(entity.getName()).isEqualTo(secondaryId("name"));
 			Assertions.assertThat(entity.getDescription()).isEmpty();
 			command.delete(entity);
