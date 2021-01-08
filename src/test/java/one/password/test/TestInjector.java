@@ -35,7 +35,7 @@ public class TestInjector implements ParameterResolver {
 
 		OP(Op.class, Suppliers.memoize(() -> create(OnePassword.class).op())),
 
-		SESSION(Session.class, Suppliers.memoize(() -> create(OnePassword.class).session()));
+		SESSION(Session.class, () -> create(OnePassword.class).session());
 
 		private final Class<?> clazz;
 		private final Supplier<?> constructor;
