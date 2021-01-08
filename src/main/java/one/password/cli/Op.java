@@ -96,6 +96,21 @@ public class Op {
 				Utils.asArray(Entity.singular(entity), userOrGroupUuid, granteeUuid, arguments));
 	}
 
+	/** Confirms a user or all users by passing {@link Flags#ALL#toString()}. */
+	public String confirm(Session session, String uuidOrAll) throws IOException {
+		return execute(session, Commands.CONFIRM, uuidOrAll);
+	}
+
+	/** Suspends a user. */
+	public String suspend(Session session, String uuid) throws IOException {
+		return execute(session, Commands.SUSPEND, uuid);
+	}
+
+	/** Reactivates a suspended user. */
+	public String reactivate(Session session, String uuid) throws IOException {
+		return execute(session, Commands.REACTIVATE, uuid);
+	}
+
 	/** Prints the version number of the installed 1password CLI. */
 	public String version() throws IOException {
 		return execute(null, Commands.VERSION);

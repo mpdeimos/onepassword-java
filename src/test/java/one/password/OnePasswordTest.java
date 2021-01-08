@@ -3,8 +3,10 @@ package one.password;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,7 @@ import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
 import one.password.OnePasswordBase.UserCommand;
 import one.password.OnePasswordBase.VaultCommand;
+import one.password.cli.Op;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
@@ -57,15 +60,21 @@ class OnePasswordTest {
 	class Users extends EntityCommandTest<User, UserCommand> {
 		private final String emailTemplatePrefix;
 		private final String emailTemplateSuffix;
+		private final Properties environment = TestUtils.getTestEnvironment();
 
 		protected Users(OnePassword op) {
 			super(User.class, op.users());
-			Properties environment =
-					TestUtils.assertNoIOException(() -> TestUtils.getTestEnvironment());
-			emailTemplatePrefix = environment.getProperty("OP_TEST_EMAILADDRESS_TEMPLATE_PREFIX");
-			emailTemplateSuffix = environment.getProperty("OP_TEST_EMAILADDRESS_TEMPLATE_SUFFIX");
+			emailTemplatePrefix = envVar("OP_TEST_EMAILADDRESS_TEMPLATE_PREFIX");
+			emailTemplateSuffix = envVar("OP_TEST_EMAILADDRESS_TEMPLATE_SUFFIX");
 			Assertions.assertThat(emailTemplatePrefix).isNotEmpty();
 			Assertions.assertThat(emailTemplateSuffix).isNotEmpty();
+		}
+
+		private String envVar(String variable) {
+			String value = environment.getProperty(variable);
+			Assertions.assertThat(value).as("Environment variable is not set: " + variable)
+					.isNotEmpty();
+			return value;
 		}
 
 		@Override
@@ -129,6 +138,117 @@ class OnePasswordTest {
 			User user = createTestEntity("twice");
 			Assertions.assertThatIOException().isThrownBy(() -> createTestEntity("twice"));
 			command.delete(user);
+		}
+
+		@Test
+		void confirm(OnePassword op, TestCredentials credentials) throws IOException {
+			User admin = op.users().get(credentials.getEmailAddress());
+			Assertions.assertThatIOException().isThrownBy(() -> op.users().confirm(admin))
+					.withMessageContaining("user is already confirmed");
+
+			User invited = createTestEntity("invited");
+			Assertions.assertThatIOException().isThrownBy(() -> op.users().confirm(invited))
+					.withMessageContaining("user cannot be confirmed");
+			Assertions.assertThat(invited.isInvited()).isTrue();
+			Assertions.assertThat(invited.isPendingConfirmation()).isFalse();
+			Assertions.assertThat(invited.isActive()).isFalse();
+			Assertions.assertThat(invited.isGuest()).isFalse();
+			Assertions.assertThat(invited.isSuspended()).isFalse();
+			command.delete(invited);
+
+			// we sadly cannot generate a user to confirm
+		}
+
+		/**
+		 * Tests confirmation of all users. We need to mock the OP cli, as otherwise we'd destroy
+		 * our test data.
+		 */
+		@Test
+		void confirmAll(Session session) throws IOException {
+
+			List<String> passedArguments = new ArrayList<>();
+			OnePasswordBase op = new OnePasswordMock(new Op() {
+				public String execute(Session session, String... arguments) throws IOException {
+					passedArguments.addAll(Arrays.asList(arguments));
+					return "";
+				}
+			});
+
+			op.users().confirmAll();
+
+			Assertions.assertThat(passedArguments).isEqualTo(Arrays.asList("confirm", "--all"));
+		}
+
+		@Test
+		void extendedAttributes(OnePassword op, TestCredentials credentials) throws IOException {
+			User admin = op.users().get(credentials.getEmailAddress());
+			Assertions.assertThat(admin.isInvited()).isFalse();
+			Assertions.assertThat(admin.isPendingConfirmation()).isFalse();
+			Assertions.assertThat(admin.isActive()).isTrue();
+			Assertions.assertThat(admin.isGuest()).isFalse();
+			Assertions.assertThat(admin.isSuspended()).isFalse();
+
+			User viaLink = op.users().get(envVar("OP_TEST_EMAILADDRESS_UNCONFIRMED_LINK"));
+			Assertions.assertThat(viaLink.isInvited()).isFalse();
+			Assertions.assertThat(viaLink.isPendingConfirmation()).isTrue();
+			Assertions.assertThat(viaLink.isActive()).isFalse();
+			Assertions.assertThat(viaLink.isGuest()).isFalse();
+			Assertions.assertThat(viaLink.isSuspended()).isFalse();
+
+			User viaMail = op.users().get(envVar("OP_TEST_EMAILADDRESS_UNCONFIRMED_MAIL"));
+			Assertions.assertThat(viaMail.isInvited()).isFalse();
+			Assertions.assertThat(viaMail.isPendingConfirmation()).isTrue();
+			Assertions.assertThat(viaMail.isActive()).isFalse();
+			Assertions.assertThat(viaMail.isGuest()).isFalse();
+			Assertions.assertThat(viaMail.isSuspended()).isFalse();
+
+			User viaCli = op.users().get(envVar("OP_TEST_EMAILADDRESS_UNCONFIRMED_CLI"));
+			Assertions.assertThat(viaCli.isInvited()).isFalse();
+			Assertions.assertThat(viaCli.isPendingConfirmation()).isTrue();
+			Assertions.assertThat(viaCli.isActive()).isFalse();
+			Assertions.assertThat(viaCli.isGuest()).isFalse();
+			Assertions.assertThat(viaCli.isSuspended()).isFalse();
+
+			User guest = op.users().get(envVar("OP_TEST_EMAILADDRESS_UNCONFIRMED_GUEST"));
+			Assertions.assertThat(guest.isInvited()).isFalse();
+			Assertions.assertThat(guest.isPendingConfirmation()).isTrue();
+			Assertions.assertThat(guest.isActive()).isFalse();
+			Assertions.assertThat(guest.isGuest()).isTrue();
+			Assertions.assertThat(guest.isSuspended()).isFalse();
+		}
+
+		@Test
+		void suspend(OnePassword op) throws IOException {
+			User suspend = op.users().get(envVar("OP_TEST_EMAILADDRESS_SUSPEND"));
+			op.users().reactivate(suspend); // ensure not suspended
+			suspend = op.users().get(suspend.getEmail());
+			Assertions.assertThat(suspend.isSuspended()).isFalse();
+			Assertions.assertThat(suspend.isInvited()).isFalse();
+			Assertions.assertThat(suspend.isPendingConfirmation()).isFalse();
+			Assertions.assertThat(suspend.isActive()).isTrue();
+			Assertions.assertThat(suspend.isGuest()).isFalse();
+
+			op.users().suspend(suspend);
+			User suspended = op.users().get(suspend.getEmail());
+			Assertions.assertThat(suspended.isSuspended()).isTrue();
+			Assertions.assertThat(suspended.isInvited()).isFalse();
+			Assertions.assertThat(suspended.isPendingConfirmation()).isFalse();
+			Assertions.assertThat(suspended.isActive()).isFalse();
+			Assertions.assertThat(suspended.isGuest()).isFalse();
+
+			Assertions.assertThatCode(() -> op.users().suspend(suspended))
+					.doesNotThrowAnyException();
+
+			op.users().reactivate(suspend);
+			User reactivated = op.users().get(suspend.getEmail());
+			Assertions.assertThat(reactivated.isSuspended()).isFalse();
+			Assertions.assertThat(reactivated.isInvited()).isFalse();
+			Assertions.assertThat(reactivated.isPendingConfirmation()).isFalse();
+			Assertions.assertThat(reactivated.isActive()).isTrue();
+			Assertions.assertThat(reactivated.isGuest()).isFalse();
+
+			Assertions.assertThatCode(() -> op.users().reactivate(reactivated))
+					.doesNotThrowAnyException();
 		}
 	}
 
@@ -459,5 +579,13 @@ class OnePasswordTest {
 			command.delete(entity);
 			command.delete(entity2);
 		}
+	}
+
+	private static class OnePasswordMock extends OnePasswordBase {
+
+		protected OnePasswordMock(Op op) {
+			super(op);
+		}
+
 	}
 }

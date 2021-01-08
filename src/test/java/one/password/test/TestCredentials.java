@@ -11,7 +11,7 @@ public class TestCredentials {
 	private final Properties environment;
 
 	public TestCredentials() {
-		environment = TestUtils.assertNoIOException(TestUtils::getTestEnvironment);
+		environment = TestUtils.getTestEnvironment();
 
 		Assertions.assertThat(getSignInAddress()).isNotEmpty();
 		Assertions.assertThat(getEmailAddress()).isNotEmpty();

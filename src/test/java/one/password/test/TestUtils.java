@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
+import one.password.util.RunnableWithException;
 import one.password.util.SupplierWithException;
 
 /** Utility methods for unit testing. */
@@ -21,12 +22,13 @@ public class TestUtils {
 	 * variables and variables stored in the working directories ".test.env" file. The latter take
 	 * precedence.
 	 */
-	public static Properties getTestEnvironment() throws IOException {
+	public static Properties getTestEnvironment() {
 		Properties environment = new Properties();
 		environment.putAll(System.getenv());
 
 		if (Files.exists(TEST_ENV_FILE)) {
-			environment.load(Files.newBufferedReader(TEST_ENV_FILE));
+			TestUtils.assertNoIOException(
+					() -> environment.load(Files.newBufferedReader(TEST_ENV_FILE)));
 		}
 
 		return environment;
@@ -50,6 +52,16 @@ public class TestUtils {
 		} catch (IOException e) {
 			Assertions.assertThat(e).doesNotThrowAnyException();
 			return null;
+		}
+	}
+
+
+	/** Asserts that the action does not throw an {@link java.io.IOException}. */
+	public static void assertNoIOException(RunnableWithException<IOException> action) {
+		try {
+			action.run();
+		} catch (IOException e) {
+			Assertions.assertThat(e).doesNotThrowAnyException();
 		}
 	}
 

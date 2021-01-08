@@ -48,6 +48,26 @@ public abstract class OnePasswordBase {
 		public User create(String emailAddress, String name, String language) throws IOException {
 			return createWithArguments(emailAddress, name, Flags.LANGUAGE.is(language));
 		}
+
+		/** Confirms a user. */
+		public void confirm(User user) throws IOException {
+			internal().execute((op, session) -> op.confirm(session, user.getId()));
+		}
+
+		/** Confirms all unconfirmed users. */
+		public void confirmAll() throws IOException {
+			internal().execute((op, session) -> op.confirm(session, Flags.ALL.toString()));
+		}
+
+		/** Suspends a user. */
+		public void suspend(User user) throws IOException {
+			internal().execute((op, session) -> op.suspend(session, user.getId()));
+		}
+
+		/** Reactivates a suspended user. */
+		public void reactivate(User user) throws IOException {
+			internal().execute((op, session) -> op.reactivate(session, user.getId()));
+		}
 	}
 
 	/** Commands for manipulating groups. */
