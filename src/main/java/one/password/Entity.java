@@ -70,12 +70,11 @@ public interface Entity {
 
 	/** Marker interface for users and groups to grant access. */
 	public static interface UserOrGroup extends Entity {
-
+		// TODO rename to accessor?
 	}
 
 	/** Marker interface for entities users may have access to. */
 	public static interface UserAccessible extends Entity {
-		/** For internal use. The flag for the list users command. */
-		Flags op_listUserFlag();
+		// TODO rename to accessible?
 	}
 }

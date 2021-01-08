@@ -60,10 +60,17 @@ public abstract class OnePasswordBase {
 
 	private static <E extends Entity, R extends Entity> E[] listRelated(Internal<E> internal,
 			R related) throws IOException {
+		return listRelated(internal, related,
+				json -> Json.deserialize(json, Utils.arrayType(internal.type())));
+	}
+
+	private static <E extends Entity, R extends Entity, O> O listRelated(Internal<E> internal,
+			R related, FunctionWithException<String, O, IOException> deserializer)
+			throws IOException {
 		String filterFlag = Entity.filterFlag(related);
 		String json =
 				internal.execute(op -> op.list(internal.session(), internal.type(), filterFlag));
-		return Json.deserialize(json, Utils.arrayType(internal.type()));
+		return deserializer.apply(json);
 	}
 
 	public interface Internal<E extends Entity> {
@@ -167,6 +174,23 @@ public abstract class OnePasswordBase {
 		}
 	}
 
+	/**
+	 * Commands for listing entities that have been granted direct access to other entities.
+	 */
+	public interface ListRolesWithDirectAccessToCommand<Accessor extends Entity, Accessible extends Entity>
+			extends ListWithDirectAccessToCommand<Accessor, Entity> {
+		/** Lists all entities that have access to other entities (members of). */
+		default public Map<Accessor, Role> listRolesWithDirectAccessTo(Accessible accessible)
+				throws IOException {
+			return listRelated(internal(), accessible, json -> {
+				Accessor[] accessors = Json.deserialize(json, Utils.arrayType(internal().type()));
+				Role.JsonWrapper[] roles = Json.deserialize(json, Role.JsonWrapper[].class);
+				return IntStream.range(0, Math.min(accessors.length, roles.length)).boxed()
+						.collect(Collectors.toMap(i -> accessors[i], i -> roles[i].getRole()));
+			});
+		}
+	}
+
 	/** Commands for manipulating an entity that is identified by name. */
 	public class NamedEntityCommand<T extends Entity.Named> extends EntityCommand<T> {
 		NamedEntityCommand(Class<T> type) {
@@ -192,7 +216,7 @@ public abstract class OnePasswordBase {
 
 	/** Commands for manipulating users. */
 	public class UserEntityCommand extends EntityCommand<User>
-			implements ListWithDirectAccessToCommand<User, Vault> {
+			implements ListRolesWithDirectAccessToCommand<User, Entity.UserAccessible> {
 		UserEntityCommand() {
 			super(User.class);
 		}
@@ -259,16 +283,6 @@ public abstract class OnePasswordBase {
 		private void add(User user, Entity.UserAccessible entity, Role role) throws IOException {
 			execute(op -> op.add(session, User.class, user.getUuid(), entity.getUuid(),
 					Flags.ROLE.is(Objects.toString(role, null))));
-		}
-
-		/** Lists users of the group with role permissions. */
-		public Map<User, Role> users(Group entity) throws IOException {
-			String json = execute(op -> op.list(session, User.class,
-					entity.op_listUserFlag().is(entity.getUuid())));
-			User[] users = Json.deserialize(json, User[].class);
-			Role.JsonWrapper[] roles = Json.deserialize(json, Role.JsonWrapper[].class);
-			return IntStream.range(0, Math.min(users.length, roles.length)).boxed()
-					.collect(Collectors.toMap(i -> users[i], i -> roles[i].getRole()));
 		}
 
 		/** Revoke a user's access to a group or vault. */

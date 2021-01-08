@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,8 @@ import one.password.test.TestUtils;
 import one.password.util.Utils;
 
 class OnePasswordTest {
+	private static final Comparator<Entity> UUID_COMPARATOR = Comparator.comparing(Entity::getUuid);
+
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
 
@@ -220,25 +223,23 @@ class OnePasswordTest {
 		void addUserToGroup() throws IOException {
 			User user = users.createTestEntity();
 			Group group = groups.createTestEntity();
-			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
-					.doesNotContain(user.getUuid());
+			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
 			op.access().add(user, group);
-			Assertions.assertThat(op.access().users(group).entrySet())
-					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
-							&& entry.getValue() == Role.MEMBER));
+			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
+					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
+							&& entry.getValue() == Role.MEMBER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
 			op.access().add(user, group, Role.MANAGER);
-			Assertions.assertThat(op.access().users(group).entrySet())
-					.anyMatch(entry -> (entry.getKey().getUuid().equals(user.getUuid())
-							&& entry.getValue() == Role.MANAGER));
+			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
+					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
+							&& entry.getValue() == Role.MANAGER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
 			op.access().remove(user, group);
-			Assertions.assertThat(op.access().users(group).keySet()).extracting(User::getUuid)
-					.doesNotContain(user.getUuid());
+			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
 			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, group));
@@ -327,11 +328,11 @@ class OnePasswordTest {
 
 		private void assertContainsEntity(Entity[] entities, Entity entity, boolean contained) {
 			if (contained) {
-				Assertions.assertThat(entities).extracting(Entity::getUuid)
-						.contains(entity.getUuid());
+				Assertions.assertThat(entities).usingElementComparator(UUID_COMPARATOR)
+						.contains(entity);
 			} else {
-				Assertions.assertThat(entities).extracting(Entity::getUuid)
-						.doesNotContain(entity.getUuid());
+				Assertions.assertThat(entities).usingElementComparator(UUID_COMPARATOR)
+						.doesNotContain(entity);
 			}
 		}
 
@@ -385,19 +386,21 @@ class OnePasswordTest {
 		void createListGetDelete() throws IOException {
 			E entity = createTestEntity();
 
+			Assertions.assertThat(command.list()).usingElementComparator(UUID_COMPARATOR)
+					.contains(entity);
 			Assertions.assertThat(command.list())
-					.anyMatch(e -> e.getUuid().equals(entity.getUuid()));
-			Assertions.assertThat(command.list()).extracting(this::getSecondaryIdentifier)
-					.anyMatch(secondaryId -> secondaryId.equals(getSecondaryIdentifier(entity)));
+					.usingElementComparator(Comparator.comparing(this::getSecondaryIdentifier))
+					.contains(entity);
 
-			Assertions.assertThat(command.get(entity.getUuid()))
-					.matches(e -> e.getUuid().equals(entity.getUuid()));
+			Assertions.assertThat(command.get(entity.getUuid())).usingComparator(UUID_COMPARATOR)
+					.isEqualTo(entity);
 			Assertions.assertThat(command.get(getSecondaryIdentifier(entity)))
-					.matches(e -> e.getUuid().equals(entity.getUuid()));
+					.usingComparator(Comparator.comparing(this::getSecondaryIdentifier))
+					.isEqualTo(entity);
 
 			command.delete(entity);
-			Assertions.assertThat(command.list())
-					.noneMatch(e -> e.getUuid().equals(entity.getUuid()));
+			Assertions.assertThat(command.list()).usingElementComparator(UUID_COMPARATOR)
+					.doesNotContain(entity);
 
 			Assertions.assertThatIOException().isThrownBy(() -> command.delete(entity));
 		}

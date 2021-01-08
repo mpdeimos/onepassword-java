@@ -28,9 +28,4 @@ public class Group extends Entity.Named implements Entity.UserOrGroup, Entity.Us
 		return Stream.concat(super.op_editArguments(),
 				Stream.of(Flags.DESCRIPTION.is(description)));
 	}
-
-	@Override
-	public Flags op_listUserFlag() {
-		return Flags.GROUP;
-	}
 }
