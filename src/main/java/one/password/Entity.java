@@ -6,8 +6,8 @@ import one.password.cli.Flags;
 
 /** Base class for 1password entities. */
 public interface Entity {
-	/** Returns the entities Uuid. */
-	public String getUuid();
+	/** Returns the entity primary Id. */
+	public String getId();
 
 	/** For internal use: Arguments for editing this entity via the 1password CLI. */
 	Stream<String> op_editArguments();
@@ -31,16 +31,29 @@ public interface Entity {
 			return null;
 		}
 
-		return Flags.set(entity.getClass().getSimpleName().toLowerCase(), entity.getUuid());
+		return Flags.set(entity.getClass().getSimpleName().toLowerCase(), entity.getId());
+	}
+
+	/** Base class for entities with a secondary Id. */
+	public interface SecondaryId {
+		/** Returns the entity primary Id. */
+		public String getSecondaryId();
+
 	}
 
 	/** Base class for 1password entities. */
-	public abstract static class Base implements Entity {
+	public abstract static class Base implements Entity, Entity.SecondaryId {
 		private String uuid;
 
+		/** Returns the entities Uuid. */
 		@Override
-		public String getUuid() {
+		public String getId() {
 			return uuid;
+		}
+
+		@Override
+		public String toString() {
+			return getSecondaryId();
 		}
 	}
 
@@ -65,6 +78,11 @@ public interface Entity {
 
 		public Stream<String> op_editArguments() {
 			return Stream.of(Flags.NAME.is(name));
+		}
+
+		@Override
+		public String getSecondaryId() {
+			return getName();
 		}
 	}
 

@@ -21,7 +21,9 @@ import one.password.test.TestUtils;
 import one.password.util.Utils;
 
 class OnePasswordTest {
-	private static final Comparator<Entity> UUID_COMPARATOR = Comparator.comparing(Entity::getUuid);
+	private static final Comparator<Entity> ID_COMPARATOR = Comparator.comparing(Entity::getId);
+	private static final Comparator<Entity.SecondaryId> ID2_COMPARATOR =
+			Comparator.comparing(Entity.SecondaryId::getSecondaryId);
 
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
@@ -68,18 +70,13 @@ class OnePasswordTest {
 
 		@Override
 		protected User createTestEntity(String name) throws IOException {
-			String emailAddress = secondaryIdentifier(name);
+			String emailAddress = secondaryId(name);
 			return command.create(emailAddress, name);
 		}
 
 		@Override
-		protected String secondaryIdentifier(String name) {
+		protected String secondaryId(String name) {
 			return emailTemplatePrefix + name.replaceAll("[\\W]|_", "_") + emailTemplateSuffix;
-		}
-
-		@Override
-		protected String getSecondaryIdentifier(User entity) {
-			return entity.getEmail();
 		}
 
 		@Override
@@ -96,8 +93,8 @@ class OnePasswordTest {
 
 		@Test
 		void createUserWithAdditionalFields() throws IOException {
-			User user = command.create(secondaryIdentifier("email"), "user name");
-			Assertions.assertThat(user.getEmail()).isEqualTo(secondaryIdentifier("email"));
+			User user = command.create(secondaryId("email"), "user name");
+			Assertions.assertThat(user.getEmail()).isEqualTo(secondaryId("email"));
 			Assertions.assertThat(user.getName()).isEqualTo("user name");
 			Assertions.assertThat(user.getFirstName()).isEqualTo("user name");
 			Assertions.assertThat(user.getLastName()).isEmpty();
@@ -108,17 +105,17 @@ class OnePasswordTest {
 			Assertions.assertThat(user.getLastAuthAt()).isBefore(user.getCreatedAt());
 			command.delete(user);
 
-			user = command.create(secondaryIdentifier("email2"), "user name", "de");
+			user = command.create(secondaryId("email2"), "user name", "de");
 			Assertions.assertThat(user.getLanguage()).isEqualTo("de");
 		}
 
 		@Test
 		void editName() throws IOException {
-			User user = command.create(secondaryIdentifier("email"), "user name");
+			User user = command.create(secondaryId("email"), "user name");
 			TestUtils.waitOneSecond();
 			user.setName("new name");
 			command.edit(user);
-			User editedUser = command.get(user.getUuid());
+			User editedUser = command.get(user.getId());
 			Assertions.assertThat(editedUser.getName()).isEqualTo("new name");
 			Assertions.assertThat(editedUser.getFirstName()).isEqualTo("new name");
 			Assertions.assertThat(editedUser.getLastName()).isEmpty();
@@ -157,13 +154,13 @@ class OnePasswordTest {
 
 		@Test
 		void setDescription() throws IOException {
-			Group group = command.create(secondaryIdentifier("group"), "description");
+			Group group = command.create(secondaryId("group"), "description");
 			Assertions.assertThat(group.getDescription()).isEqualTo("description");
 			Assertions.assertThat(group.getUpdatedAt()).isEmpty();
 			group.setDescription("new description");
 			TestUtils.waitOneSecond();
 			command.edit(group);
-			Group editedGroup = command.get(group.getUuid());
+			Group editedGroup = command.get(group.getId());
 			Assertions.assertThat(editedGroup.getDescription()).isEqualTo("new description");
 			Assertions.assertThat(editedGroup.getUpdatedAt()).isPresent();
 			Assertions.assertThat(editedGroup.getUpdatedAt().get())
@@ -228,13 +225,13 @@ class OnePasswordTest {
 
 			op.users().grantAccessTo(user, group);
 			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
-					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
+					.anyMatch(entry -> ID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MEMBER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
 			op.users().add(user, group, Role.MANAGER);
 			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
-					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
+					.anyMatch(entry -> ID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MANAGER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
@@ -330,10 +327,10 @@ class OnePasswordTest {
 
 		private void assertContainsEntity(Entity[] entities, Entity entity, boolean contained) {
 			if (contained) {
-				Assertions.assertThat(entities).usingElementComparator(UUID_COMPARATOR)
+				Assertions.assertThat(entities).usingElementComparator(ID_COMPARATOR)
 						.contains(entity);
 			} else {
-				Assertions.assertThat(entities).usingElementComparator(UUID_COMPARATOR)
+				Assertions.assertThat(entities).usingElementComparator(ID_COMPARATOR)
 						.doesNotContain(entity);
 			}
 		}
@@ -353,7 +350,7 @@ class OnePasswordTest {
 		}
 	}
 
-	abstract static class EntityCommandTest<E extends Entity, C extends EntityCommand<E>> {
+	abstract static class EntityCommandTest<E extends Entity & Entity.SecondaryId, C extends EntityCommand<E>> {
 		protected final Class<E> type;
 		protected final C command;
 
@@ -380,28 +377,24 @@ class OnePasswordTest {
 
 		protected abstract E createTestEntity(String name) throws IOException;
 
-		protected abstract String secondaryIdentifier(String name);
-
-		protected abstract String getSecondaryIdentifier(E entity);
+		protected abstract String secondaryId(String name);
 
 		@Test
 		void createListGetDelete() throws IOException {
 			E entity = createTestEntity();
 
-			Assertions.assertThat(command.list()).usingElementComparator(UUID_COMPARATOR)
+			Assertions.assertThat(command.list()).usingElementComparator(ID_COMPARATOR)
 					.contains(entity);
-			Assertions.assertThat(command.list())
-					.usingElementComparator(Comparator.comparing(this::getSecondaryIdentifier))
+			Assertions.assertThat(command.list()).usingElementComparator(ID2_COMPARATOR)
 					.contains(entity);
 
-			Assertions.assertThat(command.get(entity.getUuid())).usingComparator(UUID_COMPARATOR)
+			Assertions.assertThat(command.get(entity.getId())).usingComparator(ID_COMPARATOR)
 					.isEqualTo(entity);
-			Assertions.assertThat(command.get(getSecondaryIdentifier(entity)))
-					.usingComparator(Comparator.comparing(this::getSecondaryIdentifier))
-					.isEqualTo(entity);
+			Assertions.assertThat(command.get(entity.getSecondaryId()))
+					.usingComparator(ID2_COMPARATOR).isEqualTo(entity);
 
 			command.delete(entity);
-			Assertions.assertThat(command.list()).usingElementComparator(UUID_COMPARATOR)
+			Assertions.assertThat(command.list()).usingElementComparator(ID_COMPARATOR)
 					.doesNotContain(entity);
 
 			Assertions.assertThatIOException().isThrownBy(() -> command.delete(entity));
@@ -423,28 +416,23 @@ class OnePasswordTest {
 
 		@Override
 		protected E createTestEntity(String name) throws IOException {
-			return command.create(secondaryIdentifier(name));
+			return command.create(secondaryId(name));
 		}
 
 		@Override
-		protected String secondaryIdentifier(String name) {
+		protected String secondaryId(String name) {
 			return TEST_ITEM_PREFIX + name;
-		}
-
-		@Override
-		protected String getSecondaryIdentifier(E entity) {
-			return entity.getName();
 		}
 
 		@Test
 		void nameAndDescription() throws IOException {
-			E entity = command.create(secondaryIdentifier("name"));
-			Assertions.assertThat(entity.getName()).isEqualTo(secondaryIdentifier("name"));
+			E entity = command.create(secondaryId("name"));
+			Assertions.assertThat(entity.getName()).isEqualTo(secondaryId("name"));
 			Assertions.assertThat(entity.getDescription()).isEmpty();
 			command.delete(entity);
 
-			entity = command.create(secondaryIdentifier("name"), "some description");
-			Assertions.assertThat(entity.getName()).isEqualTo(secondaryIdentifier("name"));
+			entity = command.create(secondaryId("name"), "some description");
+			Assertions.assertThat(entity.getName()).isEqualTo(secondaryId("name"));
 			Assertions.assertThat(entity.getDescription()).isEqualTo("some description");
 			command.delete(entity);
 		}
@@ -452,10 +440,10 @@ class OnePasswordTest {
 		@Test
 		void edit() throws IOException {
 			E entity = createTestEntity("name");
-			entity.setName(secondaryIdentifier("edited"));
+			entity.setName(secondaryId("edited"));
 			command.edit(entity);
-			Assertions.assertThat(command.get(entity.getUuid()).getName())
-					.isEqualTo(secondaryIdentifier("edited"));
+			Assertions.assertThat(command.get(entity.getId()).getName())
+					.isEqualTo(secondaryId("edited"));
 			command.delete(entity);
 			Assertions.assertThatIOException().isThrownBy(() -> command.edit(entity));
 		}

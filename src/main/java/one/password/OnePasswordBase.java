@@ -69,6 +69,7 @@ public abstract class OnePasswordBase {
 		return deserializer.apply(json);
 	}
 
+	/** Internal methods not meant for public use. */
 	public interface Internal<E extends Entity> {
 		/** Returns the entity type of this command. */
 		Class<E> type();
@@ -129,13 +130,13 @@ public abstract class OnePasswordBase {
 		/** Saves modification to the given entity. */
 		public void edit(E entity) throws IOException {
 			internal().execute(op -> op.edit(internal().session(), internal().type(),
-					entity.getUuid(), entity.op_editArguments().toArray(String[]::new)));
+					entity.getId(), entity.op_editArguments().toArray(String[]::new)));
 		}
 
 		/** Deletes an entity. */
 		public void delete(E entity) throws IOException {
 			internal().execute(
-					op -> op.delete(internal().session(), internal().type(), entity.getUuid()));
+					op -> op.delete(internal().session(), internal().type(), entity.getId()));
 		}
 
 		protected E createWithArguments(String name, String... arguments) throws IOException {
@@ -195,13 +196,13 @@ public abstract class OnePasswordBase {
 		/** Grant a access to an entity. */
 		default void grantAccessTo(Accessor accessor, Accessible accessible) throws IOException {
 			internal().execute(op -> op.add(internal().session(), accessor.getClass(),
-					accessor.getUuid(), accessible.getUuid()));
+					accessor.getId(), accessible.getId()));
 		}
 
 		/** Revoke access to an entity. */
 		default void revokeAccessTo(Accessor accessor, Accessible accessible) throws IOException {
 			internal().execute(op -> op.remove(internal().session(), accessor.getClass(),
-					accessor.getUuid(), accessible.getUuid()));
+					accessor.getId(), accessible.getId()));
 		}
 	}
 
@@ -215,8 +216,8 @@ public abstract class OnePasswordBase {
 		/** Grant a access to an entity with a given role. */
 		default void add(Accessor accessor, Accessible accessible, Role role) throws IOException {
 			internal().execute(
-					op -> op.add(internal().session(), accessor.getClass(), accessor.getUuid(),
-							accessible.getUuid(), Flags.ROLE.is(Objects.toString(role, null))));
+					op -> op.add(internal().session(), accessor.getClass(), accessor.getId(),
+							accessible.getId(), Flags.ROLE.is(Objects.toString(role, null))));
 		}
 	}
 
