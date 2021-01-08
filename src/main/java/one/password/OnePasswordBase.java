@@ -37,10 +37,6 @@ public abstract class OnePasswordBase {
 		return new VaultEntityCommand();
 	}
 
-	public AccessCommand access() {
-		return new AccessCommand();
-	}
-
 	public Op op() {
 		return op;
 	}
@@ -153,7 +149,7 @@ public abstract class OnePasswordBase {
 	 * Commands for listing entities that are (transitively, e.g. via groups) accessible by other
 	 * entities.
 	 */
-	public interface ListWithAccessByCommand<Accessible extends Entity, Accessor extends Entity>
+	public interface ListAccessByCommand<Accessible extends Entity, Accessor extends Entity>
 			extends TypeEntityCommand<Accessible> {
 		/**
 		 * Lists all entities that are (transitively, e.g. via groups) accessible by other entities.
@@ -166,9 +162,9 @@ public abstract class OnePasswordBase {
 	/**
 	 * Commands for listing entities that have been granted direct access to other entities.
 	 */
-	public interface ListWithDirectAccessToCommand<Accessor extends Entity, Accessible extends Entity>
+	public interface ListAccessToCommand<Accessor extends Entity, Accessible extends Entity>
 			extends TypeEntityCommand<Accessor> {
-		/** Lists all entities that have access to other entities (members of). */
+		/** Lists all entities that have direct access to other entities (members of). */
 		default public Accessor[] listWithDirectAccessTo(Accessible accessible) throws IOException {
 			return listRelated(internal(), accessible);
 		}
@@ -177,10 +173,10 @@ public abstract class OnePasswordBase {
 	/**
 	 * Commands for listing entities that have been granted direct access to other entities.
 	 */
-	public interface ListRolesWithDirectAccessToCommand<Accessor extends Entity, Accessible extends Entity>
-			extends ListWithDirectAccessToCommand<Accessor, Entity> {
+	public interface RoleListAccessToCommand<Accessor extends Entity, Accessible extends Entity>
+			extends ListAccessToCommand<Accessor, Entity> {
 		/** Lists all entities that have access to other entities (members of). */
-		default public Map<Accessor, Role> listRolesWithDirectAccessTo(Accessible accessible)
+		default Map<Accessor, Role> listRolesWithDirectAccessTo(Accessible accessible)
 				throws IOException {
 			return listRelated(internal(), accessible, json -> {
 				Accessor[] accessors = Json.deserialize(json, Utils.arrayType(internal().type()));
@@ -188,6 +184,39 @@ public abstract class OnePasswordBase {
 				return IntStream.range(0, Math.min(accessors.length, roles.length)).boxed()
 						.collect(Collectors.toMap(i -> accessors[i], i -> roles[i].getRole()));
 			});
+		}
+	}
+
+	/**
+	 * Commands for managing access to other entities.
+	 */
+	public interface AccessToCommand<Accessor extends Entity.UserOrGroup, Accessible extends Entity>
+			extends ListAccessToCommand<Accessor, Entity> {
+		/** Grant a access to an entity. */
+		default void grantAccessTo(Accessor accessor, Accessible accessible) throws IOException {
+			internal().execute(op -> op.add(internal().session(), accessor.getClass(),
+					accessor.getUuid(), accessible.getUuid()));
+		}
+
+		/** Revoke access to an entity. */
+		default void revokeAccessTo(Accessor accessor, Accessible accessible) throws IOException {
+			internal().execute(op -> op.remove(internal().session(), accessor.getClass(),
+					accessor.getUuid(), accessible.getUuid()));
+		}
+	}
+
+
+	/**
+	 * Commands for managing access to other entities using roles.
+	 */
+	public interface RoleAccessToCommand<Accessor extends Entity.UserOrGroup, Accessible extends Entity>
+			extends AccessToCommand<Accessor, Entity>,
+			RoleListAccessToCommand<Accessor, Accessible> {
+		/** Grant a access to an entity with a given role. */
+		default void add(Accessor accessor, Accessible accessible, Role role) throws IOException {
+			internal().execute(
+					op -> op.add(internal().session(), accessor.getClass(), accessor.getUuid(),
+							accessible.getUuid(), Flags.ROLE.is(Objects.toString(role, null))));
 		}
 	}
 
@@ -216,7 +245,7 @@ public abstract class OnePasswordBase {
 
 	/** Commands for manipulating users. */
 	public class UserEntityCommand extends EntityCommand<User>
-			implements ListRolesWithDirectAccessToCommand<User, Entity.UserAccessible> {
+			implements RoleAccessToCommand<User, Entity.UserAccessible> {
 		UserEntityCommand() {
 			super(User.class);
 		}
@@ -233,8 +262,8 @@ public abstract class OnePasswordBase {
 	}
 
 	/** Commands for manipulating groups. */
-	public class GroupEntityCommand extends NamedEntityCommand<Group> implements
-			ListWithAccessByCommand<Group, User>, ListWithDirectAccessToCommand<Group, Vault> {
+	public class GroupEntityCommand extends NamedEntityCommand<Group>
+			implements ListAccessByCommand<Group, User>, AccessToCommand<Group, Vault> {
 		GroupEntityCommand() {
 			super(Group.class);
 		}
@@ -242,7 +271,7 @@ public abstract class OnePasswordBase {
 
 	/** Commands for manipulating vaults. */
 	public class VaultEntityCommand extends NamedEntityCommand<Vault>
-			implements ListWithAccessByCommand<Vault, Entity.UserOrGroup> {
+			implements ListAccessByCommand<Vault, Entity.UserOrGroup> {
 		VaultEntityCommand() {
 			super(Vault.class);
 		}
@@ -255,39 +284,6 @@ public abstract class OnePasswordBase {
 				throws IOException {
 			return createWithArguments(name, description,
 					Flags.ALLOW_ADMINS_TO_MANAGE.is(Boolean.toString(adminAccess)));
-		}
-	}
-
-	/** Command for granting or revoking access to entities. */
-	public class AccessCommand {
-		/** Grant a access to a vault. */
-		public void add(Group group, Vault vault) throws IOException {
-			execute(op -> op.add(session, group.getClass(), group.getUuid(), vault.getUuid()));
-		}
-
-		/** Revoke a group's access to a vault. */
-		public void remove(Group group, Vault vault) throws IOException {
-			execute(op -> op.remove(session, group.getClass(), group.getUuid(), vault.getUuid()));
-		}
-
-		/** Grant a user access to a group. */
-		public void add(User user, Entity.UserAccessible entity) throws IOException {
-			add(user, entity, null);
-		}
-
-		/** Grant a user access to a group or vault with given permission role. */
-		public void add(User user, Group group, Role role) throws IOException {
-			add(user, (Entity.UserAccessible) group, role);
-		}
-
-		private void add(User user, Entity.UserAccessible entity, Role role) throws IOException {
-			execute(op -> op.add(session, User.class, user.getUuid(), entity.getUuid(),
-					Flags.ROLE.is(Objects.toString(role, null))));
-		}
-
-		/** Revoke a user's access to a group or vault. */
-		public void remove(User user, Entity.UserAccessible group) throws IOException {
-			execute(op -> op.remove(session, User.class, user.getUuid(), group.getUuid()));
 		}
 	}
 }

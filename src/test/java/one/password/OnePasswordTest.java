@@ -226,23 +226,24 @@ class OnePasswordTest {
 			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
-			op.access().add(user, group);
+			op.users().grantAccessTo(user, group);
 			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
 					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MEMBER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
-			op.access().add(user, group, Role.MANAGER);
+			op.users().add(user, group, Role.MANAGER);
 			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
 					.anyMatch(entry -> UUID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MANAGER);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
 
-			op.access().remove(user, group);
+			op.users().revokeAccessTo(user, group);
 			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
 			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
 
-			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, group));
+			Assertions.assertThatIOException()
+					.isThrownBy(() -> op.users().revokeAccessTo(user, group));
 
 			op.users().delete(user);
 			op.groups().delete(group);
@@ -254,13 +255,14 @@ class OnePasswordTest {
 			Vault vault = vaults.createTestEntity();
 			assertDirectAccess(vault, user, false);
 
-			op.access().add(user, vault);
+			op.users().grantAccessTo(user, vault);
 			assertDirectAccess(vault, user, true);
 
-			op.access().remove(user, vault);
+			op.users().revokeAccessTo(user, vault);
 			assertDirectAccess(vault, user, false);
 
-			Assertions.assertThatIOException().isThrownBy(() -> op.access().remove(user, vault));
+			Assertions.assertThatIOException()
+					.isThrownBy(() -> op.users().revokeAccessTo(user, vault));
 
 			op.users().delete(user);
 			op.vaults().delete(vault);
@@ -275,25 +277,25 @@ class OnePasswordTest {
 			assertDirectAccess(vault, user, false, group, false);
 			assertTransitiveAccess(vault, user, false, group, false);
 
-			op.access().add(group, vault);
+			op.groups().grantAccessTo(group, vault);
 			assertDirectAccess(vault, user, false, group, true);
 			assertTransitiveAccess(vault, user, false, group, true);
 
-			op.access().add(user, group);
+			op.users().grantAccessTo(user, group);
 			// Adding user to group, does not list the user
 			assertDirectAccess(vault, user, false, group, true);
 			// But transitive access is granted
 			assertTransitiveAccess(vault, user, true, group, true);
 
-			op.access().add(user, vault);
+			op.users().grantAccessTo(user, vault);
 			assertDirectAccess(vault, user, true, group, true);
 			assertTransitiveAccess(vault, user, true, group, true);
 
-			op.access().remove(group, vault);
+			op.groups().revokeAccessTo(group, vault);
 			assertDirectAccess(vault, user, true, group, false);
 			assertTransitiveAccess(vault, user, true, group, false);
 
-			op.access().remove(user, vault);
+			op.users().revokeAccessTo(user, vault);
 			assertDirectAccess(vault, user, false, group, false);
 			assertTransitiveAccess(vault, user, false, group, false);
 
