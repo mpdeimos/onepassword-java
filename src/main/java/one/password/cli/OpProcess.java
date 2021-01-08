@@ -34,6 +34,9 @@ class OpProcess {
 			}
 
 			Arrays.stream(arguments).filter(Objects::nonNull).forEach(builder::arg);
+			if (config.getCache()) {
+				builder.arg(Flags.CACHE.toString());
+			}
 
 			builder.allowedExitCode(1);
 			FluentProcess process = builder.start();

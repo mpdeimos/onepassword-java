@@ -10,6 +10,7 @@ public class Config {
 	private static final String DEFAULT_DEVICE = Utils.randomBase32(26);
 	private String shorthand;
 	private Path executable;
+	private boolean cache = false;
 	private Duration timeout = Duration.ofSeconds(10);
 	private String device = DEFAULT_DEVICE;
 
@@ -38,6 +39,14 @@ public class Config {
 	public Config setTimeout(Duration timeout) {
 		this.timeout = timeout;
 		return this;
+	}
+
+	public void setCache(boolean enabled) {
+		this.cache = enabled;
+	}
+
+	public boolean getCache() {
+		return cache;
 	}
 
 	public String getDevice() {

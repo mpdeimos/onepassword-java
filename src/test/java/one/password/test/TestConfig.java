@@ -19,6 +19,7 @@ public class TestConfig extends Config {
 			executable += ".exe";
 		}
 		setExecutable(Paths.get(executable));
+		setCache(true);
 		TestUtils.assertNoIOException(() -> setDevice(
 				TestUtils.getTestEnvironment().getProperty("OP_TEST_DEVICE", null)));
 	}
