@@ -7,8 +7,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import one.password.cli.Flags;
 import one.password.cli.Op;
+import one.password.util.BiFunctionWithException;
 import one.password.util.FunctionWithException;
 import one.password.util.Json;
+import one.password.util.SupplierWithException;
 import one.password.util.Utils;
 
 /** Base class for high-level 1password CLI Java bindings. */
@@ -25,48 +27,77 @@ public abstract class OnePasswordBase {
 		this.session = session;
 	}
 
-	public UserEntityCommand users() {
-		return new UserEntityCommand();
+	/** Commands for manipulating users. */
+	public UserCommand users() {
+		return new UserCommand();
 	}
 
-	public GroupEntityCommand groups() {
-		return new GroupEntityCommand();
+	/** Commands for manipulating users. */
+	public class UserCommand extends EntityCommand<User>
+			implements RoleAccessToCommand<User, Entity.UserAccessible> {
+		UserCommand() {
+			super(User.class);
+		}
+
+		/** Creates an user. */
+		public User create(String emailAddress, String name) throws IOException {
+			return create(emailAddress, name, null);
+		}
+
+		/** Creates an user and specifies its language, e.g. "en" or "de". */
+		public User create(String emailAddress, String name, String language) throws IOException {
+			return createWithArguments(emailAddress, name, Flags.LANGUAGE.is(language));
+		}
 	}
 
-	public VaultEntityCommand vaults() {
-		return new VaultEntityCommand();
+	/** Commands for manipulating groups. */
+	public GroupCommand groups() {
+		return new GroupCommand();
 	}
 
+	/** Commands for manipulating groups. */
+	public class GroupCommand extends NamedEntityCommand<Group>
+			implements ListAccessibleByCommand<Group, User>, AccessToCommand<Group, Vault> {
+		GroupCommand() {
+			super(Group.class);
+		}
+	}
+
+	/** Commands for manipulating vaults. */
+	public VaultCommand vaults() {
+		return new VaultCommand();
+	}
+
+	/** Commands for manipulating vaults. */
+	public class VaultCommand extends NamedEntityCommand<Vault>
+			implements ListAccessibleByCommand<Vault, Entity.UserOrGroup> {
+		VaultCommand() {
+			super(Vault.class);
+		}
+
+		/**
+		 * Creates a new vault optionally restricting access for admins. Default is that admins have
+		 * access.
+		 */
+		public Vault create(String name, String description, boolean adminAccess)
+				throws IOException {
+			return createWithArguments(name, description,
+					Flags.ALLOW_ADMINS_TO_MANAGE.is(Boolean.toString(adminAccess)));
+		}
+	}
+
+	/** Access to the raw 1password CLI {@link Op}. */
 	public Op op() {
 		return op;
 	}
 
+	/** Access to the 1password {@link Session}. */
 	public Session session() {
 		return session;
 	}
 
-	protected String execute(FunctionWithException<Op, String, IOException> action)
-			throws IOException {
-		return action.apply(op);
-	}
-
-	private static <E extends Entity> E[] list(Internal<E> internal) throws IOException {
-		return listRelated(internal, null);
-	}
-
-	private static <E extends Entity, R extends Entity> E[] listRelated(Internal<E> internal,
-			R related) throws IOException {
-		return listRelated(internal, related,
-				json -> Json.deserialize(json, Utils.arrayType(internal.type())));
-	}
-
-	private static <E extends Entity, R extends Entity, O> O listRelated(Internal<E> internal,
-			R related, FunctionWithException<String, O, IOException> deserializer)
-			throws IOException {
-		String filterFlag = Entity.filterFlag(related);
-		String json =
-				internal.execute(op -> op.list(internal.session(), internal.type(), filterFlag));
-		return deserializer.apply(json);
+	protected String execute(SupplierWithException<String, IOException> action) throws IOException {
+		return action.get();
 	}
 
 	/** Internal methods not meant for public use. */
@@ -74,11 +105,9 @@ public abstract class OnePasswordBase {
 		/** Returns the entity type of this command. */
 		Class<E> type();
 
-		/** Returns the current session. */
-		Session session();
-
 		/** Executes an function with {@link Op}. */
-		String execute(FunctionWithException<Op, String, IOException> action) throws IOException;
+		String execute(BiFunctionWithException<Op, Session, String, IOException> action)
+				throws IOException;
 	}
 
 	public interface TypeEntityCommand<E extends Entity> {
@@ -98,14 +127,10 @@ public abstract class OnePasswordBase {
 				}
 
 				@Override
-				public Session session() {
-					return session;
-				}
-
-				@Override
-				public String execute(FunctionWithException<Op, String, IOException> action)
+				public String execute(
+						BiFunctionWithException<Op, Session, String, IOException> action)
 						throws IOException {
-					return OnePasswordBase.this.execute(action);
+					return OnePasswordBase.this.execute(() -> action.apply(op, session));
 				}
 			};
 		}
@@ -118,7 +143,7 @@ public abstract class OnePasswordBase {
 		/** Returns an entity with the given uuid or other primary key. Fails if not unique. */
 		public E get(String nameOrUuid) throws IOException {
 			String json = internal()
-					.execute(op -> op.get(internal().session(), internal().type(), nameOrUuid));
+					.execute((op, session) -> op.get(session, internal().type(), nameOrUuid));
 			return Json.deserialize(json, internal().type());
 		}
 
@@ -129,19 +154,19 @@ public abstract class OnePasswordBase {
 
 		/** Saves modification to the given entity. */
 		public void edit(E entity) throws IOException {
-			internal().execute(op -> op.edit(internal().session(), internal().type(),
-					entity.getId(), entity.op_editArguments().toArray(String[]::new)));
+			internal().execute((op, session) -> op.edit(session, internal().type(), entity.getId(),
+					entity.op_editArguments().toArray(String[]::new)));
 		}
 
 		/** Deletes an entity. */
 		public void delete(E entity) throws IOException {
 			internal().execute(
-					op -> op.delete(internal().session(), internal().type(), entity.getId()));
+					(op, session) -> op.delete(session, internal().type(), entity.getId()));
 		}
 
 		protected E createWithArguments(String name, String... arguments) throws IOException {
 			String json = internal().execute(
-					op -> op.create(internal().session(), internal().type(), name, arguments));
+					(op, session) -> op.create(session, internal().type(), name, arguments));
 			return Json.deserialize(json, internal().type());
 		}
 	}
@@ -150,12 +175,12 @@ public abstract class OnePasswordBase {
 	 * Commands for listing entities that are (transitively, e.g. via groups) accessible by other
 	 * entities.
 	 */
-	public interface ListAccessByCommand<Accessible extends Entity, Accessor extends Entity>
+	public interface ListAccessibleByCommand<Accessible extends Entity, Accessor extends Entity>
 			extends TypeEntityCommand<Accessible> {
 		/**
 		 * Lists all entities that are (transitively, e.g. via groups) accessible by other entities.
 		 */
-		default public Accessible[] listWithAccessBy(Accessor accessor) throws IOException {
+		default public Accessible[] listAccessibleBy(Accessor accessor) throws IOException {
 			return listRelated(internal(), accessor);
 		}
 	}
@@ -166,19 +191,19 @@ public abstract class OnePasswordBase {
 	public interface ListAccessToCommand<Accessor extends Entity, Accessible extends Entity>
 			extends TypeEntityCommand<Accessor> {
 		/** Lists all entities that have direct access to other entities (members of). */
-		default public Accessor[] listWithDirectAccessTo(Accessible accessible) throws IOException {
+		default public Accessor[] listGrantedAccessTo(Accessible accessible) throws IOException {
 			return listRelated(internal(), accessible);
 		}
 	}
 
 	/**
-	 * Commands for listing entities that have been granted direct access to other entities.
+	 * Commands for listing entities that have been granted direct access to other entities
+	 * including their permission roles.
 	 */
 	public interface RoleListAccessToCommand<Accessor extends Entity, Accessible extends Entity>
 			extends ListAccessToCommand<Accessor, Entity> {
 		/** Lists all entities that have access to other entities (members of). */
-		default Map<Accessor, Role> listRolesWithDirectAccessTo(Accessible accessible)
-				throws IOException {
+		default Map<Accessor, Role> listGrantedRolesTo(Accessible accessible) throws IOException {
 			return listRelated(internal(), accessible, json -> {
 				Accessor[] accessors = Json.deserialize(json, Utils.arrayType(internal().type()));
 				Role.JsonWrapper[] roles = Json.deserialize(json, Role.JsonWrapper[].class);
@@ -195,17 +220,16 @@ public abstract class OnePasswordBase {
 			extends ListAccessToCommand<Accessor, Entity> {
 		/** Grant a access to an entity. */
 		default void grantAccessTo(Accessor accessor, Accessible accessible) throws IOException {
-			internal().execute(op -> op.add(internal().session(), accessor.getClass(),
+			internal().execute((op, session) -> op.add(session, accessor.getClass(),
 					accessor.getId(), accessible.getId()));
 		}
 
 		/** Revoke access to an entity. */
 		default void revokeAccessTo(Accessor accessor, Accessible accessible) throws IOException {
-			internal().execute(op -> op.remove(internal().session(), accessor.getClass(),
+			internal().execute((op, session) -> op.remove(session, accessor.getClass(),
 					accessor.getId(), accessible.getId()));
 		}
 	}
-
 
 	/**
 	 * Commands for managing access to other entities using roles.
@@ -215,8 +239,8 @@ public abstract class OnePasswordBase {
 			RoleListAccessToCommand<Accessor, Accessible> {
 		/** Grant a access to an entity with a given role. */
 		default void add(Accessor accessor, Accessible accessible, Role role) throws IOException {
-			internal().execute(
-					op -> op.add(internal().session(), accessor.getClass(), accessor.getId(),
+			internal()
+					.execute((op, session) -> op.add(session, accessor.getClass(), accessor.getId(),
 							accessible.getId(), Flags.ROLE.is(Objects.toString(role, null))));
 		}
 	}
@@ -244,47 +268,22 @@ public abstract class OnePasswordBase {
 		}
 	}
 
-	/** Commands for manipulating users. */
-	public class UserEntityCommand extends EntityCommand<User>
-			implements RoleAccessToCommand<User, Entity.UserAccessible> {
-		UserEntityCommand() {
-			super(User.class);
-		}
-
-		/** Creates an user. */
-		public User create(String emailAddress, String name) throws IOException {
-			return create(emailAddress, name, null);
-		}
-
-		/** Creates an user and specifies its language, e.g. "en" or "de". */
-		public User create(String emailAddress, String name, String language) throws IOException {
-			return createWithArguments(emailAddress, name, Flags.LANGUAGE.is(language));
-		}
+	private static <E extends Entity> E[] list(Internal<E> internal) throws IOException {
+		return listRelated(internal, null);
 	}
 
-	/** Commands for manipulating groups. */
-	public class GroupEntityCommand extends NamedEntityCommand<Group>
-			implements ListAccessByCommand<Group, User>, AccessToCommand<Group, Vault> {
-		GroupEntityCommand() {
-			super(Group.class);
-		}
+	private static <E extends Entity, R extends Entity> E[] listRelated(Internal<E> internal,
+			R related) throws IOException {
+		return listRelated(internal, related,
+				json -> Json.deserialize(json, Utils.arrayType(internal.type())));
 	}
 
-	/** Commands for manipulating vaults. */
-	public class VaultEntityCommand extends NamedEntityCommand<Vault>
-			implements ListAccessByCommand<Vault, Entity.UserOrGroup> {
-		VaultEntityCommand() {
-			super(Vault.class);
-		}
-
-		/**
-		 * Creates a new vault optionally restricting access for admins. Default is that admins have
-		 * access.
-		 */
-		public Vault create(String name, String description, boolean adminAccess)
-				throws IOException {
-			return createWithArguments(name, description,
-					Flags.ALLOW_ADMINS_TO_MANAGE.is(Boolean.toString(adminAccess)));
-		}
+	private static <E extends Entity, R extends Entity, O> O listRelated(Internal<E> internal,
+			R related, FunctionWithException<String, O, IOException> deserializer)
+			throws IOException {
+		String filterFlag = Entity.filterFlag(related);
+		String json =
+				internal.execute((op, session) -> op.list(session, internal.type(), filterFlag));
+		return deserializer.apply(json);
 	}
 }

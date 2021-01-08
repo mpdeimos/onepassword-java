@@ -3,7 +3,7 @@ package one.password;
 import java.io.IOException;
 import java.util.function.Supplier;
 import one.password.cli.Op;
-import one.password.util.FunctionWithException;
+import one.password.util.SupplierWithException;
 
 /**
  * High-level 1password CLI Java binding that creates a new session that will be auto-extended if
@@ -56,8 +56,7 @@ public class OnePassword extends OnePasswordBase implements AutoCloseable {
 	}
 
 	@Override
-	protected String execute(FunctionWithException<Op, String, IOException> action)
-			throws IOException {
+	protected String execute(SupplierWithException<String, IOException> action) throws IOException {
 		try {
 			return super.execute(action);
 		} catch (IOException e) {

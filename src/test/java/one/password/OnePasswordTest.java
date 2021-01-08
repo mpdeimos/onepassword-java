@@ -13,8 +13,8 @@ import org.junit.jupiter.api.Test;
 import one.password.Entity.UserOrGroup;
 import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
-import one.password.OnePasswordBase.UserEntityCommand;
-import one.password.OnePasswordBase.VaultEntityCommand;
+import one.password.OnePasswordBase.UserCommand;
+import one.password.OnePasswordBase.VaultCommand;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
@@ -54,7 +54,7 @@ class OnePasswordTest {
 	}
 
 	@Nested
-	class Users extends EntityCommandTest<User, UserEntityCommand> {
+	class Users extends EntityCommandTest<User, UserCommand> {
 		private final String emailTemplatePrefix;
 		private final String emailTemplateSuffix;
 
@@ -169,7 +169,7 @@ class OnePasswordTest {
 	}
 
 	@Nested
-	class Vaults extends NamedEntityCommandTest<Vault, VaultEntityCommand> {
+	class Vaults extends NamedEntityCommandTest<Vault, VaultCommand> {
 		protected Vaults(OnePassword op) {
 			super(Vault.class, op.vaults());
 		}
@@ -186,11 +186,11 @@ class OnePasswordTest {
 			Group admins = op.groups().get(Groups.ADMINISTRATORS);
 
 			Vault vault = command.create("vault");
-			access.assertDirectAccess(vault, admins, true);
+			access.assertGrantedAccessTo(vault, admins, true);
 			command.delete(vault);
 
 			vault = command.create("vault", "description", false);
-			access.assertDirectAccess(vault, admins, false);
+			access.assertGrantedAccessTo(vault, admins, false);
 			command.delete(vault);
 		}
 	}
@@ -220,24 +220,24 @@ class OnePasswordTest {
 		void addUserToGroup() throws IOException {
 			User user = users.createTestEntity();
 			Group group = groups.createTestEntity();
-			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
-			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
+			assertContainsEntity(op.users().listGrantedAccessTo(group), user, false);
+			assertContainsEntity(op.groups().listAccessibleBy(user), group, false);
 
 			op.users().grantAccessTo(user, group);
-			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
+			Assertions.assertThat(op.users().listGrantedRolesTo(group).entrySet())
 					.anyMatch(entry -> ID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MEMBER);
-			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
+			assertContainsEntity(op.groups().listAccessibleBy(user), group, true);
 
 			op.users().add(user, group, Role.MANAGER);
-			Assertions.assertThat(op.users().listRolesWithDirectAccessTo(group).entrySet())
+			Assertions.assertThat(op.users().listGrantedRolesTo(group).entrySet())
 					.anyMatch(entry -> ID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MANAGER);
-			assertContainsEntity(op.groups().listWithAccessBy(user), group, true);
+			assertContainsEntity(op.groups().listAccessibleBy(user), group, true);
 
 			op.users().revokeAccessTo(user, group);
-			assertContainsEntity(op.users().listWithDirectAccessTo(group), user, false);
-			assertContainsEntity(op.groups().listWithAccessBy(user), group, false);
+			assertContainsEntity(op.users().listGrantedAccessTo(group), user, false);
+			assertContainsEntity(op.groups().listAccessibleBy(user), group, false);
 
 			Assertions.assertThatIOException()
 					.isThrownBy(() -> op.users().revokeAccessTo(user, group));
@@ -250,13 +250,16 @@ class OnePasswordTest {
 		void addUserToVault() throws IOException {
 			User user = users.createTestEntity();
 			Vault vault = vaults.createTestEntity();
-			assertDirectAccess(vault, user, false);
+			assertGrantedAccessTo(vault, user, false);
+			assertAccessiblyBy(vault, user, false);
 
 			op.users().grantAccessTo(user, vault);
-			assertDirectAccess(vault, user, true);
+			assertGrantedAccessTo(vault, user, true);
+			assertAccessiblyBy(vault, user, true);
 
 			op.users().revokeAccessTo(user, vault);
-			assertDirectAccess(vault, user, false);
+			assertGrantedAccessTo(vault, user, false);
+			assertAccessiblyBy(vault, user, false);
 
 			Assertions.assertThatIOException()
 					.isThrownBy(() -> op.users().revokeAccessTo(user, vault));
@@ -271,57 +274,57 @@ class OnePasswordTest {
 			User user = users.createTestEntity();
 			Group group = groups.createTestEntity();
 			Vault vault = vaults.createTestEntity();
-			assertDirectAccess(vault, user, false, group, false);
-			assertTransitiveAccess(vault, user, false, group, false);
+			assertGrantedAccessTo(vault, user, false, group, false);
+			assertAccessiblyBy(vault, user, false, group, false);
 
 			op.groups().grantAccessTo(group, vault);
-			assertDirectAccess(vault, user, false, group, true);
-			assertTransitiveAccess(vault, user, false, group, true);
+			assertGrantedAccessTo(vault, user, false, group, true);
+			assertAccessiblyBy(vault, user, false, group, true);
 
 			op.users().grantAccessTo(user, group);
 			// Adding user to group, does not list the user
-			assertDirectAccess(vault, user, false, group, true);
+			assertGrantedAccessTo(vault, user, false, group, true);
 			// But transitive access is granted
-			assertTransitiveAccess(vault, user, true, group, true);
+			assertAccessiblyBy(vault, user, true, group, true);
 
 			op.users().grantAccessTo(user, vault);
-			assertDirectAccess(vault, user, true, group, true);
-			assertTransitiveAccess(vault, user, true, group, true);
+			assertGrantedAccessTo(vault, user, true, group, true);
+			assertAccessiblyBy(vault, user, true, group, true);
 
 			op.groups().revokeAccessTo(group, vault);
-			assertDirectAccess(vault, user, true, group, false);
-			assertTransitiveAccess(vault, user, true, group, false);
+			assertGrantedAccessTo(vault, user, true, group, false);
+			assertAccessiblyBy(vault, user, true, group, false);
 
 			op.users().revokeAccessTo(user, vault);
-			assertDirectAccess(vault, user, false, group, false);
-			assertTransitiveAccess(vault, user, false, group, false);
+			assertGrantedAccessTo(vault, user, false, group, false);
+			assertAccessiblyBy(vault, user, false, group, false);
 
 			op.users().delete(user);
 			op.groups().delete(group);
 			op.vaults().delete(vault);
 		}
 
-		private void assertDirectAccess(Vault vault, User user, boolean userAccess, Group group,
+		private void assertGrantedAccessTo(Vault vault, User user, boolean userAccess, Group group,
 				boolean groupAccess) throws IOException {
-			assertDirectAccess(vault, user, userAccess);
-			assertDirectAccess(vault, group, groupAccess);
+			assertGrantedAccessTo(vault, user, userAccess);
+			assertGrantedAccessTo(vault, group, groupAccess);
 		}
 
-		private void assertDirectAccess(Vault vault, Entity.UserOrGroup userOrGroup,
+		private void assertGrantedAccessTo(Vault vault, Entity.UserOrGroup userOrGroup,
 				boolean hasAccess) throws IOException {
-			UserOrGroup[] members = listDirectAccessTo(userOrGroup.getClass(), vault);
+			UserOrGroup[] members = listGrantedAccessTo(userOrGroup.getClass(), vault);
 			assertContainsEntity(members, userOrGroup, hasAccess);
 		}
 
-		private void assertTransitiveAccess(Vault vault, User user, boolean userAccess, Group group,
+		private void assertAccessiblyBy(Vault vault, User user, boolean userAccess, Group group,
 				boolean groupAccess) throws IOException {
-			assertTransitiveAccess(vault, user, userAccess);
-			assertTransitiveAccess(vault, group, groupAccess);
+			assertAccessiblyBy(vault, user, userAccess);
+			assertAccessiblyBy(vault, group, groupAccess);
 		}
 
-		private void assertTransitiveAccess(Vault vault, Entity.UserOrGroup userOrGroup,
+		private void assertAccessiblyBy(Vault vault, Entity.UserOrGroup userOrGroup,
 				boolean hasAccess) throws IOException {
-			Vault[] members = op.vaults().listWithAccessBy(userOrGroup);
+			Vault[] members = op.vaults().listAccessibleBy(userOrGroup);
 			assertContainsEntity(members, vault, hasAccess);
 		}
 
@@ -335,15 +338,15 @@ class OnePasswordTest {
 			}
 		}
 
-		private Entity.UserOrGroup[] listDirectAccessTo(
+		private Entity.UserOrGroup[] listGrantedAccessTo(
 				Class<? extends Entity.UserOrGroup> accessorType, Vault accessible)
 				throws IOException {
 			if (accessorType.equals(User.class)) {
-				return op.users().listWithDirectAccessTo(accessible);
+				return op.users().listGrantedAccessTo(accessible);
 			}
 
 			if (accessorType.equals(Group.class)) {
-				return op.groups().listWithDirectAccessTo(accessible);
+				return op.groups().listGrantedAccessTo(accessible);
 			}
 
 			return Assertions.fail("Unknown type: " + accessorType);
