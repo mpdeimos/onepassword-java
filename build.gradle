@@ -1,7 +1,8 @@
 plugins {
 	id 'java-library'
 	id 'jacoco'
-	id "de.undercouch.download" version "4.1.1"
+	id 'de.undercouch.download' version '4.1.1'
+	id 'com.github.johnrengelman.shadow' version '6.1.0'
 	id 'com.adarshr.test-logger' version '2.1.1'
 }
 
@@ -75,3 +76,13 @@ task downloadBinaries {
 
 task bootstrap(dependsOn: ["downloadBinaries"])
 processTestResources.dependsOn += ["downloadBinaries"]
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
+
+task relocateShadowJar(type: ConfigureShadowRelocation) {
+	target = tasks.shadowJar
+	prefix = 'one.password.shadow'
+
+}
+
+tasks.shadowJar.dependsOn tasks.relocateShadowJar
