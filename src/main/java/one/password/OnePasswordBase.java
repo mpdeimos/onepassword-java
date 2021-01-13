@@ -221,7 +221,7 @@ public abstract class OnePasswordBase {
 	 * including their permission roles.
 	 */
 	public interface RoleListAccessToCommand<Accessor extends Entity, Accessible extends Entity>
-			extends ListAccessToCommand<Accessor, Entity> {
+			extends ListAccessToCommand<Accessor, Accessible> {
 		/** Lists all entities that have access to other entities (members of). */
 		default Map<Accessor, Role> listGrantedRolesTo(Accessible accessible) throws IOException {
 			return listRelated(internal(), accessible, json -> {
@@ -237,7 +237,7 @@ public abstract class OnePasswordBase {
 	 * Commands for managing access to other entities.
 	 */
 	public interface AccessToCommand<Accessor extends Entity.UserOrGroup, Accessible extends Entity>
-			extends ListAccessToCommand<Accessor, Entity> {
+			extends ListAccessToCommand<Accessor, Accessible> {
 		/** Grant a access to an entity. */
 		default void grantAccessTo(Accessor accessor, Accessible accessible) throws IOException {
 			internal().execute((op, session) -> op.add(session, accessor.getClass(),
@@ -255,7 +255,7 @@ public abstract class OnePasswordBase {
 	 * Commands for managing access to other entities using roles.
 	 */
 	public interface RoleAccessToCommand<Accessor extends Entity.UserOrGroup, Accessible extends Entity>
-			extends AccessToCommand<Accessor, Entity>,
+			extends AccessToCommand<Accessor, Accessible>,
 			RoleListAccessToCommand<Accessor, Accessible> {
 		/** Grant a access to an entity with a given role. */
 		default void add(Accessor accessor, Accessible accessible, Role role) throws IOException {
