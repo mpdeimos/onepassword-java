@@ -28,14 +28,15 @@ public class TestInjector implements ParameterResolver {
 
 		ONE_PASSWORD(OnePasswordBase.class, Suppliers.memoize(() -> {
 			TestConfig config = create(TestConfig.class);
-			return TestUtils.assertNoIOException(() -> new OnePassword(config,
-					config.credentials.getSignInAddress(), config.credentials.getEmailAddress(),
-					config.credentials.getSecretKey(), config.credentials::getPassword));
+			return new OnePassword(config, config.credentials.getSignInAddress(),
+					config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
+					config.credentials::getPassword);
 		})),
 
 		OP(Op.class, Suppliers.memoize(() -> create(OnePassword.class).op())),
 
-		SESSION(Session.class, () -> create(OnePassword.class).session());
+		SESSION(Session.class, () -> TestUtils
+				.assertNoIOException(() -> create(OnePassword.class).signin().session()));
 
 		private final Class<?> clazz;
 		private final Supplier<?> constructor;

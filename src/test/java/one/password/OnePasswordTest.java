@@ -3,21 +3,22 @@ package one.password;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Properties;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import one.password.Entity.UserOrGroup;
 import one.password.OnePasswordBase.EntityCommand;
 import one.password.OnePasswordBase.NamedEntityCommand;
 import one.password.OnePasswordBase.UserCommand;
 import one.password.OnePasswordBase.VaultCommand;
-import one.password.cli.Op;
+import one.password.cli.OpMock;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
@@ -30,28 +31,60 @@ class OnePasswordTest {
 
 	@Test
 	void testAutoReSignIn(TestConfig config) throws IOException {
-
 		try (OnePassword op = new OnePassword(config, config.credentials.getSignInAddress(),
 				config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
 				config.credentials::getPassword)) {
 			Session initialSession = op.session;
+			Assertions.assertThat(initialSession).isNull();
 			op.op.signout(initialSession);
 			Assertions.assertThat(op.users().list()).isNotEmpty();
-			Assertions.assertThat(initialSession.getSession())
-					.isNotEqualTo(op.session.getSession());
+			Assertions.assertThat(op.session).isNotNull();
 		}
+	}
+
+
+	@Test
+	void autoClose() throws IOException {
+
+		OnePasswordMock mock;
+		try (OnePasswordMock mock2 = new OnePasswordMock()) {
+			mock = mock2; // we intentionally leak the resource here :P
+			Assertions.assertThatCode(() -> mock.users().list()).doesNotThrowAnyException();
+		}
+
+		Assertions.assertThat(mock.getSignins()).hasSize(1);
+		Assertions.assertThat(mock.getCommands()).containsExactly(Arrays.asList("list", "users"),
+				Arrays.asList("signout"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"You are not currently signed in.",
+			"Your session expired, sign in to create a new session"})
+	void autoSignin(String error) throws IOException {
+		OnePasswordMock mock = new OnePasswordMock(new OpMock() {
+			private boolean signedOut = false;
+
+			@Override
+			public String execute(Session session, String... arguments) throws IOException {
+				if (!signedOut) {
+					signedOut = true;
+					throw new IOException(error);
+				}
+
+				return super.execute(session, arguments);
+			}
+		});
+
+		Assertions.assertThatCode(() -> mock.users().list()).doesNotThrowAnyException();
+		Assertions.assertThat(mock.getSignins()).hasSize(2);
+		Assertions.assertThat(mock.getCommands()).containsExactly(Arrays.asList("list", "users"));
 	}
 
 	@Test
 	void withoutConfig(TestCredentials credentials) throws IOException {
 		OnePassword op =
 				new OnePassword(credentials.getSignInAddress(), credentials.getEmailAddress(),
-						credentials.getSecretKey(), credentials::getPassword) {
-					@Override
-					protected void signinOnInit() throws IOException {
-						// This would fail too early as we usually sign in during construct
-					}
-				};
+						credentials.getSecretKey(), credentials::getPassword);
 		Assertions.assertThatIOException().isThrownBy(() -> op.users().list())
 				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
 	}
@@ -168,21 +201,18 @@ class OnePasswordTest {
 		@Test
 		void confirmMocked(OnePassword op, TestCredentials credentials) throws IOException {
 			User admin = op.users().get(credentials.getEmailAddress());
-			List<String> passedArguments = new ArrayList<>();
-			OnePasswordBase mock = new OnePasswordMock(new Op() {
-				public String execute(Session session, String... arguments) throws IOException {
-					passedArguments.clear();
-					passedArguments.addAll(Arrays.asList(arguments));
-					return "";
-				}
-			});
 
-			Assertions.assertThatCode(() -> mock.users().confirmAll()).doesNotThrowAnyException();
-			Assertions.assertThat(passedArguments).isEqualTo(Arrays.asList("confirm", "--all"));
+			try (OnePasswordMock mock = new OnePasswordMock()) {
+				Assertions.assertThatCode(() -> mock.users().confirmAll())
+						.doesNotThrowAnyException();
+				Assertions.assertThat(mock.getCommands())
+						.isEqualTo(Collections.singletonList(Arrays.asList("confirm", "--all")));
 
-			Assertions.assertThatCode(() -> mock.users().confirm(admin)).doesNotThrowAnyException();
-			Assertions.assertThat(passedArguments)
-					.isEqualTo(Arrays.asList("confirm", admin.getId()));
+				Assertions.assertThatCode(() -> mock.users().confirm(admin))
+						.doesNotThrowAnyException();
+				Assertions.assertThat(mock.getCommands()).isEqualTo(
+						Collections.singletonList(Arrays.asList("confirm", admin.getId())));
+			}
 		}
 
 		@Test
@@ -587,13 +617,5 @@ class OnePasswordTest {
 			command.delete(entity);
 			command.delete(entity2);
 		}
-	}
-
-	private static class OnePasswordMock extends OnePasswordBase {
-
-		protected OnePasswordMock(Op op) {
-			super(op);
-		}
-
 	}
 }
