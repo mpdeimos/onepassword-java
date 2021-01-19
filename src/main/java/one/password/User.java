@@ -20,9 +20,9 @@ public class User extends Entity.Base implements Entity.UserOrGroup {
 			"P" // via self registration: Pending Confirmation
 	));
 
-	private static final Set<String> ACTIVE_STATES = new HashSet<>(Arrays.asList("A"));
+	private static final String ACTIVE_STATE = "A";
 
-	private static final Set<String> SUSPENDED_STATES = new HashSet<>(Arrays.asList("S"));
+	private static final String SUSPENDED_STATE = "S";
 
 	private String email;
 
@@ -80,12 +80,22 @@ public class User extends Entity.Base implements Entity.UserOrGroup {
 
 	/** Returns whether a user is active. */
 	public boolean isActive() {
-		return ACTIVE_STATES.contains(state.toUpperCase());
+		return ACTIVE_STATE.equalsIgnoreCase(state);
 	}
 
 	/** Returns whether a user is suspended. */
 	public boolean isSuspended() {
-		return SUSPENDED_STATES.contains(state.toUpperCase());
+		return SUSPENDED_STATE.equalsIgnoreCase(state);
+	}
+
+	/** Internal only: Sets the suspended state of the User. */
+	void internal_setActive() {
+		this.state = ACTIVE_STATE;
+	}
+
+	/** Internal only: Sets the active state of the User. */
+	void internal_setSuspend() {
+		this.state = SUSPENDED_STATE;
 	}
 
 	/**

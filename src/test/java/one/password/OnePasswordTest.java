@@ -257,6 +257,7 @@ class OnePasswordTest {
 		void suspend(OnePassword op) throws IOException {
 			User suspend = op.users().get(envVar("OP_TEST_EMAILADDRESS_SUSPEND"));
 			op.users().reactivate(suspend); // ensure not suspended
+			Assertions.assertThat(suspend.isSuspended()).isFalse();
 			suspend = op.users().get(suspend.getEmail());
 			Assertions.assertThat(suspend.isSuspended()).isFalse();
 			Assertions.assertThat(suspend.isInvited()).isFalse();
@@ -265,6 +266,7 @@ class OnePasswordTest {
 			Assertions.assertThat(suspend.isGuest()).isFalse();
 
 			op.users().suspend(suspend);
+			Assertions.assertThat(suspend.isSuspended()).isTrue();
 			User suspended = op.users().get(suspend.getEmail());
 			Assertions.assertThat(suspended.isSuspended()).isTrue();
 			Assertions.assertThat(suspended.isInvited()).isFalse();
@@ -276,6 +278,7 @@ class OnePasswordTest {
 					.doesNotThrowAnyException();
 
 			op.users().reactivate(suspend);
+			Assertions.assertThat(suspend.isSuspended()).isFalse();
 			User reactivated = op.users().get(suspend.getEmail());
 			Assertions.assertThat(reactivated.isSuspended()).isFalse();
 			Assertions.assertThat(reactivated.isInvited()).isFalse();

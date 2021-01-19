@@ -52,6 +52,7 @@ public abstract class OnePasswordBase {
 		/** Confirms a user. */
 		public void confirm(User user) throws IOException {
 			internal().execute((op, session) -> op.confirm(session, user.getId()));
+			user.internal_setActive();
 		}
 
 		/** Confirms all unconfirmed users. */
@@ -62,11 +63,13 @@ public abstract class OnePasswordBase {
 		/** Suspends a user. */
 		public void suspend(User user) throws IOException {
 			internal().execute((op, session) -> op.suspend(session, user.getId()));
+			user.internal_setSuspend();
 		}
 
 		/** Reactivates a suspended user. */
 		public void reactivate(User user) throws IOException {
 			internal().execute((op, session) -> op.reactivate(session, user.getId()));
+			user.internal_setActive();
 		}
 	}
 
