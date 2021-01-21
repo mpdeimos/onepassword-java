@@ -10,6 +10,7 @@ public class Config {
 	private static final String DEFAULT_DEVICE = Utils.randomBase32(26);
 	private String shorthand;
 	private Path executable;
+	private Path configDir;
 	private boolean cache = false;
 	private Duration timeout = Duration.ofSeconds(10);
 	private String device = DEFAULT_DEVICE;
@@ -20,6 +21,15 @@ public class Config {
 
 	public Config setExecutable(Path executable) {
 		this.executable = executable;
+		return this;
+	}
+
+	public Optional<Path> getConfigDir() {
+		return Optional.ofNullable(configDir);
+	}
+
+	public Config setConfigDir(Path configDir) {
+		this.configDir = configDir;
 		return this;
 	}
 

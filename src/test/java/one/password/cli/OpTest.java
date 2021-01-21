@@ -2,9 +2,11 @@ package one.password.cli;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -17,6 +19,7 @@ import one.password.Vault;
 import one.password.test.TestConfig;
 import one.password.test.TestCredentials;
 import one.password.test.TestUtils;
+import one.password.util.Utils;
 
 public class OpTest {
 	@Test
@@ -28,6 +31,15 @@ public class OpTest {
 	void testGetVersionWithoutConfig() throws IOException {
 		Assertions.assertThatIOException().isThrownBy(() -> new Op().version())
 				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
+	}
+
+	@Test
+	void testInvalidConfigDir(Config config, TestCredentials credentials) throws IOException {
+		Assumptions.assumeThat(!Utils.isWindowsOs());
+		config.setConfigDir(Paths.get("/tmp"));
+		Assertions.assertThatIOException().isThrownBy(() -> new Op(config).signout(null))
+				.withMessageContaining(
+						"Can't use the specified configuration directory: Can't continue. We can't safely access \"/tmp\" because it's not owned by the current user. Change the owner or logged in user and try again");
 	}
 
 	@Test

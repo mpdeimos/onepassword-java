@@ -38,6 +38,10 @@ class OpProcess {
 				builder.arg(Flags.CACHE.toString());
 			}
 
+			if (config.getConfigDir().isPresent()) {
+				builder.arg(Flags.CONFIG.is(config.getConfigDir().get().toString()));
+			}
+
 			builder.allowedExitCode(1);
 			FluentProcess process = builder.start();
 			if (config.getTimeout().isPresent()) {
