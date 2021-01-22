@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import com.ongres.process.FluentProcess;
 import com.ongres.process.FluentProcessBuilder;
@@ -16,6 +17,9 @@ import one.password.util.Utils;
 /** Wraps execution of the 1password CLI using FluentProcess and strict exception handling. */
 class OpProcess {
 	private final FluentProcess process;
+
+	private static Pattern CONFIG_LOCATION =
+			Pattern.compile("Using configuration at non-standard location \".+\"\r?\n?");
 
 	private OpProcess(FluentProcess process) {
 		this.process = process;
@@ -75,8 +79,11 @@ class OpProcess {
 
 		Output output = process.tryGet();
 		Optional<String> error = output.error();
-		if (error.isPresent() && !error.get().isEmpty()) {
-			throw new IOException(error.get());
+		if (error.isPresent()) {
+			String errorString = CONFIG_LOCATION.matcher(error.get()).replaceAll("");
+			if (!errorString.isEmpty()) {
+				throw new IOException(errorString);
+			}
 		}
 
 		Optional<Exception> exception = output.exception();
