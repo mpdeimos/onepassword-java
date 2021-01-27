@@ -104,7 +104,7 @@ public abstract class OnePasswordBase {
 		 */
 		public Vault create(String name, String description, boolean adminAccess)
 				throws IOException {
-			return createWithArguments(name, description,
+			return createWithArguments(name, Flags.DESCRIPTION.is(description),
 					Flags.ALLOW_ADMINS_TO_MANAGE.is(Boolean.toString(adminAccess)));
 		}
 	}
@@ -261,7 +261,8 @@ public abstract class OnePasswordBase {
 			extends AccessToCommand<Accessor, Accessible>,
 			RoleListAccessToCommand<Accessor, Accessible> {
 		/** Grant a access to an entity with a given role. */
-		default void add(Accessor accessor, Accessible accessible, Role role) throws IOException {
+		default void grantAccessTo(Accessor accessor, Accessible accessible, Role role)
+				throws IOException {
 			internal()
 					.execute((op, session) -> op.add(session, accessor.getClass(), accessor.getId(),
 							accessible.getId(), Flags.ROLE.is(Objects.toString(role, null))));

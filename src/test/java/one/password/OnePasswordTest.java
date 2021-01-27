@@ -349,6 +349,7 @@ class OnePasswordTest {
 			command.delete(vault);
 
 			vault = command.create("vault", "description", false);
+			Assertions.assertThat(vault.getDescription()).isEqualTo("description");
 			access.assertGrantedAccessTo(vault, admins, false);
 			command.delete(vault);
 		}
@@ -388,7 +389,7 @@ class OnePasswordTest {
 							&& entry.getValue() == Role.MEMBER);
 			assertContainsEntity(op.groups().listAccessibleBy(user), group, true);
 
-			op.users().add(user, group, Role.MANAGER);
+			op.users().grantAccessTo(user, group, Role.MANAGER);
 			Assertions.assertThat(op.users().listGrantedRolesTo(group).entrySet())
 					.anyMatch(entry -> ID_COMPARATOR.compare(entry.getKey(), user) == 0
 							&& entry.getValue() == Role.MANAGER);
