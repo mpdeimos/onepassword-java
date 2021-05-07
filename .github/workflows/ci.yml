@@ -44,9 +44,9 @@ jobs:
         OP_TEST_EMAILADDRESS_UNCONFIRMED_CLI: ${{ secrets.OP_TEST_EMAILADDRESS_UNCONFIRMED_CLI }}
         OP_TEST_EMAILADDRESS_SUSPEND: ${{ secrets.OP_TEST_EMAILADDRESS_SUSPEND }}
 
-    - name: Teamscale Upload
-      if: ${{ always() }}
-      env:
-        PATH: ${{ github.workspace }}/build/bin
-      run: |
-        teamscale-upload --server https://teamscale.io --project GitHub-mpdeimos-onepassword-java --user mpdeimos --accesskey ${{ secrets.TEAMSCALE_ACCESS_KEY }} --partition "Test ${{ runner.os }}" --input teamscale-upload.config
+    # - name: Teamscale Upload
+    #   if: ${{ always() }}
+    #   env:
+    #     PATH: ${{ github.workspace }}/build/bin
+    #   run: |
+    #     teamscale-upload --server https://teamscale.io --project GitHub-mpdeimos-onepassword-java --user mpdeimos --accesskey ${{ secrets.TEAMSCALE_ACCESS_KEY }} --partition "Test ${{ runner.os }}" --input teamscale-upload.config
