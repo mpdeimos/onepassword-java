@@ -35,7 +35,7 @@ public class OpTest {
 
 	@Test
 	void testInvalidConfigDir(Config config, TestCredentials credentials) throws IOException {
-		Assumptions.assumeThat(!Utils.isWindowsOs());
+		Assumptions.assumeThat(Utils.isWindowsOs()).isFalse();
 		config.setConfigDir(Paths.get("/tmp"));
 		Assertions.assertThatIOException().isThrownBy(() -> new Op(config).signout(null))
 				.withMessageContaining(
@@ -50,8 +50,7 @@ public class OpTest {
 
 	@Test
 	void testSignin(Op op, TestCredentials credentials) throws IOException {
-		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword);
+		Session session = signin(op, credentials);
 		Assertions.assertThat(session.getSession()).hasLineCount(1).hasSize(43);
 		Assertions.assertThat(session.getShorthand())
 				.isEqualTo(URI.create(credentials.getSignInAddress()).getHost().split("\\.")[0]
@@ -63,9 +62,7 @@ public class OpTest {
 	void testSigninWithShorthand(TestConfig config) throws IOException {
 		config.setShorthand("myshorthand");
 		Op op = new Op(config);
-		Session session = op.signin(config.credentials.getSignInAddress(),
-				config.credentials.getEmailAddress(), config.credentials.getSecretKey(),
-				config.credentials::getPassword);
+		Session session = signin(op, config.credentials);
 		Assertions.assertThat(session.getShorthand()).isEqualTo("myshorthand");
 	}
 
@@ -87,19 +84,24 @@ public class OpTest {
 
 	@Test
 	void testSignout(Op op, TestCredentials credentials) throws IOException {
-		Session session = op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-				credentials.getSecretKey(), credentials::getPassword);
+		Session session = signin(op, credentials);
 		op.signout(session);
-		Session newSession =
-				op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
-						credentials.getSecretKey(), credentials::getPassword);
+		Session newSession = signin(op, credentials);
 		Assertions.assertThat(newSession).usingRecursiveComparison().isNotEqualTo(session);
 	}
 
+	private Session signin(Op op, TestCredentials credentials) throws IOException {
+		return op.signin(credentials.getSignInAddress(), credentials.getEmailAddress(),
+				credentials.getSecretKey(), credentials::getPassword);
+	}
+
+	// Some how for the following tests it does not work to inject a session - at least on GitHub
 
 	@ParameterizedTest
 	@MethodSource("entityClasses")
-	void smokeTestList(Class<? extends Entity> entity, Op op, Session session) throws IOException {
+	void smokeTestList(Class<? extends Entity> entity, Op op, TestCredentials credentials)
+			throws IOException {
+		Session session = signin(op, credentials);
 		op.list(session, entity);
 	}
 
@@ -108,19 +110,22 @@ public class OpTest {
 	}
 
 	@Test
-	void testListUsers(Op op, Session session, TestCredentials credentials) throws IOException {
+	void testListUsers(Op op, TestCredentials credentials) throws IOException {
+		Session session = signin(op, credentials);
 		String users = op.list(session, User.class);
 		Assertions.assertThat(users).contains(credentials.getEmailAddress());
 	}
 
 	@Test
-	void testListGroups(Op op, Session session) throws IOException {
+	void testListGroups(Op op, TestCredentials credentials) throws IOException {
+		Session session = signin(op, credentials);
 		String groups = op.list(session, Group.class);
 		Assertions.assertThat(groups).contains("Administrators");
 	}
 
 	@Test
-	void testListVaults(Op op, Session session) throws IOException {
+	void testListVaults(Op op, TestCredentials credentials) throws IOException {
+		Session session = signin(op, credentials);
 		String groups = op.list(session, Vault.class);
 		Assertions.assertThat(groups).contains("Shared");
 	}
