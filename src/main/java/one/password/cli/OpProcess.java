@@ -16,6 +16,9 @@ import one.password.util.Utils;
 
 /** Wraps execution of the 1password CLI using FluentProcess and strict exception handling. */
 class OpProcess {
+	/** THe filename of the 1password CLI executable, system dependant. */
+	public static final String OP_EXECUTABLE_FILENAME = executableFileName();
+
 	private final FluentProcess process;
 
 	private static final Pattern CONFIG_LOCATION =
@@ -56,17 +59,23 @@ class OpProcess {
 		});
 	}
 
-	private static String getExecutable(Config config) {
+	private static String executableFileName() {
 		String executable = "op";
 		if (Utils.isWindowsOs()) {
 			executable += ".exe";
 		}
+		return executable;
+	}
+
+	private static String getExecutable(Config config) {
+		String executable = OP_EXECUTABLE_FILENAME;
 
 		if (config.getExecutable().isPresent()) {
 			executable = config.getExecutable().get().toAbsolutePath().toString();
 		}
 		return executable;
 	}
+
 
 	/** Connects a stream of input strings. */
 	public OpProcess input(Stream<String> input) throws IOException {

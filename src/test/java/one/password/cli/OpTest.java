@@ -1,7 +1,10 @@
 package one.password.cli;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.stream.Stream;
@@ -22,13 +25,25 @@ import one.password.test.TestUtils;
 import one.password.util.Utils;
 
 public class OpTest {
+	/** Returns whether one password is on the user path. */
+	public static boolean isOpOnPath() {
+		for (String path : System.getenv("PATH").split(File.pathSeparator)){
+			if (Files.isExecutable(Paths.get(path, OpProcess.OP_EXECUTABLE_FILENAME))) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	@Test
 	void testGetVersion(Op op) throws IOException {
 		Assertions.assertThat(op.version()).isEqualTo(TestUtils.getOnePasswordVersion());
 	}
 
 	@Test
-	void testGetVersionWithoutConfig() throws IOException {
+	void testGetVersionWithoutConfig() {
+		Assumptions.assumeThat(OpTest.isOpOnPath()).isFalse();
 		Assertions.assertThatIOException().isThrownBy(() -> new Op().version())
 				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");
 	}

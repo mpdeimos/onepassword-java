@@ -1,7 +1,10 @@
 package one.password;
 
 import java.io.IOException;
+import one.password.cli.OpTest;
+import one.password.test.TestUtils;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import one.password.test.TestConfig;
 
@@ -19,7 +22,8 @@ class OnePasswordPreAuthenticatedTest {
 	}
 
 	@Test
-	void withoutConfig(Session session) throws IOException {
+	void withoutConfig(Session session) {
+		Assumptions.assumeThat(OpTest.isOpOnPath()).isFalse();
 		OnePassword.PreAuthenticated oppa = new OnePassword.PreAuthenticated(session);
 		Assertions.assertThatIOException().isThrownBy(() -> oppa.users().list())
 				.withMessageMatching(".*Cannot run program \"op(\\.exe)?\".*");

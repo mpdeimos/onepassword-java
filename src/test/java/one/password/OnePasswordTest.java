@@ -7,7 +7,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Properties;
+import one.password.cli.OpTest;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -54,7 +56,7 @@ class OnePasswordTest {
 
 		Assertions.assertThat(mock.getSignins()).hasSize(1);
 		Assertions.assertThat(mock.getCommands()).containsExactly(Arrays.asList("list", "users"),
-				Arrays.asList("signout"));
+			Collections.singletonList("signout"));
 	}
 
 	@ParameterizedTest
@@ -81,7 +83,8 @@ class OnePasswordTest {
 	}
 
 	@Test
-	void withoutConfig(TestCredentials credentials) throws IOException {
+	void withoutConfig(TestCredentials credentials) {
+		Assumptions.assumeThat(OpTest.isOpOnPath()).isFalse();
 		OnePassword op =
 				new OnePassword(credentials.getSignInAddress(), credentials.getEmailAddress(),
 						credentials.getSecretKey(), credentials::getPassword);
