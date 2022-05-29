@@ -18,7 +18,7 @@ import one.password.util.Utils;
 class OpProcess {
 	private final FluentProcess process;
 
-	private static Pattern CONFIG_LOCATION =
+	private static final Pattern CONFIG_LOCATION =
 			Pattern.compile("Using configuration at non-standard location \".+\"\r?\n?");
 
 	private OpProcess(FluentProcess process) {
