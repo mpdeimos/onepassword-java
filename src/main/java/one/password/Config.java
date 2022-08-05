@@ -12,7 +12,7 @@ public class Config {
 	private Path executable;
 	private Path configDir;
 	private boolean cache = false;
-	private Duration timeout = Duration.ofSeconds(10);
+	private Duration timeout = Duration.ofSeconds(30);
 	private String device = DEFAULT_DEVICE;
 
 	public Optional<Path> getExecutable() {
