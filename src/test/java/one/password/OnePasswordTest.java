@@ -278,7 +278,8 @@ class OnePasswordTest {
 			Assertions.assertThat(suspended.isGuest()).isFalse();
 
 			Assertions.assertThatCode(() -> op.users().suspend(suspended))
-					.doesNotThrowAnyException();
+					.isInstanceOf(IOException.class)
+					.hasMessageContaining("Can't suspend");
 
 			op.users().reactivate(suspend);
 			Assertions.assertThat(suspend.isSuspended()).isFalse();
