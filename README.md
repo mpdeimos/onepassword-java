@@ -1,5 +1,12 @@
 # 1Password CLI Java Wrapper [![CI](https://github.com/mpdeimos/onepassword-java/workflows/CI/badge.svg)](https://github.com/mpdeimos/onepassword-java/actions)
 
+---
+
+This branch is compatible with version 2 of the CLI only and currently work in progress.
+The stable version, compatble with CLI version 1 is on [branch v1](https://github.com/mpdeimos/onepassword-java/tree/v1).
+
+---
+
 ## Features
 
 The primary use case for the wrapper is provisioning of users, groups and vaults.
