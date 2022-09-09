@@ -3,7 +3,7 @@
 ---
 
 This branch is compatible with version 2 of the CLI only and currently work in progress.
-The stable version, compatble with CLI version 1 is on [branch v1](https://github.com/mpdeimos/onepassword-java/tree/v1).
+The stable version, which is compatible with CLI version 1 is on [branch v1](https://github.com/mpdeimos/onepassword-java/tree/v1).
 
 ---
 
