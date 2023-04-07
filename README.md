@@ -9,8 +9,8 @@ The stable version, which is compatible with CLI version 1 is on [branch v1](htt
 
 ## Features
 
-The primary use case for the wrapper is provisioning of users, groups and vaults.
-Support for editing or reading passwords is not implemented yet, however, pull requests are welcome.
+This wrapper was mostly written for automatic provisioning of users, groups and vaults, hence, support for editing or reading passwords is not implemented yet.
+This functionality will be added with the upgrade to version 2 of the CLI.
 
 ## Usage
 
