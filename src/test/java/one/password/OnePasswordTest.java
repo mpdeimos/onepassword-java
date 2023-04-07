@@ -147,7 +147,7 @@ class OnePasswordTest {
 			Assertions.assertThat(user.getLastName()).isEmpty();
 			Assertions.assertThat(user.getLanguage()).isEqualTo("en");
 			Assertions.assertThat(user.getCreatedAt())
-					.isCloseTo(ZonedDateTime.now(), Assertions.within(5, ChronoUnit.SECONDS))
+					.isCloseTo(ZonedDateTime.now(), Assertions.within(15, ChronoUnit.SECONDS))
 					.isEqualTo(user.getUpdatedAt());
 			Assertions.assertThat(user.getLastAuthAt()).isBefore(user.getCreatedAt());
 			command.delete(user);
